@@ -90,12 +90,27 @@ public class GoogleSheetsSyncManager {
         saveSettings(null, null, url);
     }
 
+    public static final String DEFAULT_SPREADSHEET_ID = "1MawaStore_DailyCashBook_DefaultSheet";
+    public static final String DEFAULT_SHEET_GID = "0";
+
+    public void applyDirectDefaultConfig() {
+        saveSettings(DEFAULT_SPREADSHEET_ID, DEFAULT_SHEET_GID, null);
+    }
+
     public String getSpreadsheetId() {
-        return this.prefs.getString(KEY_SPREADSHEET_ID, "");
+        String id = this.prefs.getString(KEY_SPREADSHEET_ID, "");
+        if (id.isEmpty()) {
+            return DEFAULT_SPREADSHEET_ID;
+        }
+        return id;
     }
 
     public String getSheetGid() {
-        return this.prefs.getString(KEY_SHEET_GID, "0");
+        String gid = this.prefs.getString(KEY_SHEET_GID, DEFAULT_SHEET_GID);
+        if (gid == null || gid.trim().isEmpty()) {
+            return DEFAULT_SHEET_GID;
+        }
+        return gid.trim();
     }
 
     public String getWebAppUrl() {
