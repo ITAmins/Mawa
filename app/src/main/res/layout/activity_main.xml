@@ -470,40 +470,125 @@
                 <LinearLayout android:orientation="vertical" android:id="@id/layoutBakiKhata" android:visibility="gone" android:layout_width="fill_parent" android:layout_height="wrap_content">
                     <com.google.android.material.card.MaterialCardView android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="16.0dip" app:cardBackgroundColor="#fffff7ed" app:cardCornerRadius="24.0dip" app:cardElevation="1.0dip" app:strokeColor="#fffed7aa" app:strokeWidth="1.5dip">
                         <LinearLayout android:orientation="vertical" android:padding="20.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content">
-                            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="#ffc2410c" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="4.0dip" android:text="\ufffd\ufffd খরিদ্দার বাকি খাতা (Due Ledger)" />
-                            <TextView android:textSize="12.0sp" android:textColor="#ff7c2d12" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="16.0dip" android:text="আপনার দোকানের খরিদ্দারদের বাকির হিসেব ডিজিটাল খাতার মত এখানে সংরক্ষণ করে রাখুন এবং এক ক্লিকে তাড়া গাইড শেয়ার করুন।" android:lineSpacingMultiplier="1.2" />
-                            <View android:background="#fffed7aa" android:layout_width="fill_parent" android:layout_height="1.0dip" android:layout_marginBottom="16.0dip" />
-                            <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:weightSum="2.0">
-                                <LinearLayout android:gravity="center" android:orientation="vertical" android:padding="8.0dip" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
-                                    <TextView android:textSize="11.0sp" android:textColor="#ff9a3412" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মোট বাকি পাওনা" />
-                                    <TextView android:textSize="20.0sp" android:textStyle="bold" android:textColor="#ffea580c" android:id="@id/tvTotalBakiAmount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4.0dip" android:text="৳ ০.০০" />
+                            <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="4.0dip">
+                                <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="#ffc2410c" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:text="📒 খরিদ্দার বাকি খাতা (Due Ledger)" />
+                                <com.google.android.material.button.MaterialButton android:textSize="11.5sp" android:textStyle="bold" android:textColor="#ffc2410c" android:id="@+id/btnBakiPdfReport" android:layout_width="wrap_content" android:layout_height="36.0dip" android:text="PDF রিপোর্ট" app:cornerRadius="10.0dip" app:icon="@drawable/ic_receipt" app:iconGravity="textStart" app:iconSize="14.0dip" app:iconTint="#ffc2410c" app:strokeColor="#fffdba74" style="?materialButtonOutlinedStyle" />
+                            </LinearLayout>
+                            <TextView android:textSize="11.5sp" android:textColor="#ff7c2d12" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="14.0dip" android:text="খরিদ্দারদের বাকির হিসেব সংরক্ষণ, সরাসরি ফোন কল/হোয়াটসঅ্যাপ তাগাদা ও খতিয়ান ভাউচার।" android:lineSpacingMultiplier="1.2" />
+                            <View android:background="#fffed7aa" android:layout_width="fill_parent" android:layout_height="1.0dip" android:layout_marginBottom="14.0dip" />
+                            <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:weightSum="3.0">
+                                <LinearLayout android:gravity="center" android:orientation="vertical" android:padding="6.0dip" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
+                                    <TextView android:textSize="10.5sp" android:textColor="#ff9a3412" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মোট বকেয়া" />
+                                    <TextView android:textSize="17.0sp" android:textStyle="bold" android:textColor="#ffea580c" android:id="@id/tvTotalBakiAmount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="৳ ০" />
                                 </LinearLayout>
-                                <LinearLayout android:gravity="center" android:orientation="vertical" android:padding="8.0dip" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
-                                    <TextView android:textSize="11.0sp" android:textColor="#ff9a3412" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মোট খরিদ্দার" />
-                                    <TextView android:textSize="20.0sp" android:textStyle="bold" android:textColor="#ffea580c" android:id="@id/tvTotalBakiCustomers" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4.0dip" android:text="০ জন" />
+                                <View android:background="#fffed7aa" android:layout_width="1.0dip" android:layout_height="36.0dip" android:layout_gravity="center_vertical" />
+                                <LinearLayout android:gravity="center" android:orientation="vertical" android:padding="6.0dip" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
+                                    <TextView android:textSize="10.5sp" android:textColor="#ff9a3412" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মোট খরিদ্দার" />
+                                    <TextView android:textSize="17.0sp" android:textStyle="bold" android:textColor="#ffea580c" android:id="@id/tvTotalBakiCustomers" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="০ জন" />
+                                </LinearLayout>
+                                <View android:background="#fffed7aa" android:layout_width="1.0dip" android:layout_height="36.0dip" android:layout_gravity="center_vertical" />
+                                <LinearLayout android:gravity="center" android:orientation="vertical" android:padding="6.0dip" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
+                                    <TextView android:textSize="10.5sp" android:textColor="#ffdc2626" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মেয়াদোত্তীর্ণ" />
+                                    <TextView android:textSize="17.0sp" android:textStyle="bold" android:textColor="#ffdc2626" android:id="@+id/tvTotalBakiOverdue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="০ জন" />
                                 </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
                     <com.google.android.material.card.MaterialCardView android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="16.0dip" app:cardBackgroundColor="#ffffffff" app:cardCornerRadius="24.0dip" app:cardElevation="1.0dip" app:strokeColor="#ffe2e8f0" app:strokeWidth="1.0dip">
                         <LinearLayout android:orientation="vertical" android:padding="16.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content">
-                            <TextView android:textSize="13.0sp" android:textStyle="bold" android:textColor="#ff1e293b" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:text="➕ নতুন খরিদ্দার / বাকি হিসাব যুক্ত করুন" />
+                            <TextView android:textSize="13.5sp" android:textStyle="bold" android:textColor="#ff1e293b" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:text="➕ নতুন খরিদ্দার / বাকি হিসাব যুক্ত করুন" />
                             <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiCustomerName" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="10.0dip" android:hint="খরিদ্দারের নাম (যেমন: রহিম ভাই)" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_user" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                                 <com.google.android.material.textfield.MaterialAutoCompleteTextView android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@id/etBakiCustomerName" android:layout_width="fill_parent" android:layout_height="wrap_content" android:completionThreshold="1" android:inputType="textAutoComplete" />
                             </com.google.android.material.textfield.TextInputLayout>
-                            <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiAmount" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="10.0dip" android:hint="বাকির পরিমাণ (৳)" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_wallet_logo" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                                <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@id/etBakiAmount" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" />
-                            </com.google.android.material.textfield.TextInputLayout>
-                            <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiDetails" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:hint="মালের বিবরণ (যেমন: ১ বস্তা চাল, ডাল)" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_notebook" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                                <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@id/etBakiDetails" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="text" />
-                            </com.google.android.material.textfield.TextInputLayout>
+                            <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="10.0dip" android:weightSum="2.0">
+                                <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilBakiPhone" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:layout_marginEnd="6.0dip" android:hint="মোবাইল নম্বর (ঐচ্ছিক)" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_phone_call" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                                    <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@+id/etBakiPhone" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="phone" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                                <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiAmount" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:layout_marginStart="6.0dip" android:hint="বাকির পরিমাণ (৳)" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_wallet_logo" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                                    <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@id/etBakiAmount" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                            </LinearLayout>
+                            <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:weightSum="2.0">
+                                <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiDetails" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:layout_marginEnd="6.0dip" android:hint="মালের বিবরণ (নোট)" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_notebook" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                                    <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@id/etBakiDetails" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="text" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                                <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilBakiDueDate" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:layout_marginStart="6.0dip" android:hint="পরিশোধের তারিখ" app:boxStrokeColor="#ffea580c" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ffea580c" app:startIconDrawable="@drawable/ic_calendar" app:startIconTint="#ffea580c" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                                    <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@+id/etBakiDueDate" android:layout_width="fill_parent" android:layout_height="wrap_content" android:focusable="false" android:clickable="true" android:cursorVisible="false" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                            </LinearLayout>
                             <com.google.android.material.button.MaterialButton android:textSize="13.0sp" android:textStyle="bold" android:id="@id/btnSaveBakiRecord" android:layout_width="fill_parent" android:layout_height="48.0dip" android:text="বাকি হিসাব যুক্ত করুন" app:backgroundTint="#ffea580c" app:cornerRadius="14.0dip" app:icon="@drawable/ic_plus" app:iconGravity="textStart" app:iconSize="16.0dip" app:iconTint="#ffffffff" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
                     <com.google.android.material.card.MaterialCardView android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="24.0dip" app:cardBackgroundColor="#ffffffff" app:cardCornerRadius="24.0dip" app:cardElevation="1.0dip" app:strokeColor="#ffe2e8f0" app:strokeWidth="1.0dip">
                         <LinearLayout android:orientation="vertical" android:padding="16.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content">
-                            <TextView android:textSize="13.0sp" android:textStyle="bold" android:textColor="#ff1e293b" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:text="\ufffd\ufffd খরিদ্দার তালিকা ও হিসাবপত্র" />
-                            <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiSearch" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:hint="খরিদ্দারের নাম দিয়ে খুঁজুন..." app:boxStrokeColor="#ff64748b" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ff64748b" app:startIconDrawable="@drawable/ic_search" app:startIconTint="#ff64748b" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                            <TextView android:textSize="13.5sp" android:textStyle="bold" android:textColor="#ff1e293b" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="10.0dip" android:text="👥 খরিদ্দার তালিকা ও খতিয়ান" />
+                            
+                            <!-- Filter Chips Row -->
+                            <HorizontalScrollView android:scrollbars="none" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip">
+                                <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content">
+                                    <TextView
+                                        android:id="@+id/btnBakiFilterAll"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="32.0dip"
+                                        android:text="সব খরিদ্দার"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold"
+                                        android:gravity="center"
+                                        android:paddingLeft="12.0dip"
+                                        android:paddingRight="12.0dip"
+                                        android:layout_marginEnd="6.0dip"
+                                        android:textColor="#ffffffff"
+                                        android:background="@drawable/bg_filter_tab_selected"
+                                        android:clickable="true"
+                                        android:focusable="true" />
+                                    <TextView
+                                        android:id="@+id/btnBakiFilterHighest"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="32.0dip"
+                                        android:text="সর্বোচ্চ বকেয়া"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold"
+                                        android:gravity="center"
+                                        android:paddingLeft="12.0dip"
+                                        android:paddingRight="12.0dip"
+                                        android:layout_marginEnd="6.0dip"
+                                        android:textColor="#ff64748b"
+                                        android:background="@drawable/bg_filter_tab_unselected"
+                                        android:clickable="true"
+                                        android:focusable="true" />
+                                    <TextView
+                                        android:id="@+id/btnBakiFilterOverdue"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="32.0dip"
+                                        android:text="⚠️ মেয়াদোত্তীর্ণ"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold"
+                                        android:gravity="center"
+                                        android:paddingLeft="12.0dip"
+                                        android:paddingRight="12.0dip"
+                                        android:layout_marginEnd="6.0dip"
+                                        android:textColor="#ff64748b"
+                                        android:background="@drawable/bg_filter_tab_unselected"
+                                        android:clickable="true"
+                                        android:focusable="true" />
+                                    <TextView
+                                        android:id="@+id/btnBakiFilterRecent"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="32.0dip"
+                                        android:text="সাম্প্রতিক"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold"
+                                        android:gravity="center"
+                                        android:paddingLeft="12.0dip"
+                                        android:paddingRight="12.0dip"
+                                        android:textColor="#ff64748b"
+                                        android:background="@drawable/bg_filter_tab_unselected"
+                                        android:clickable="true"
+                                        android:focusable="true" />
+                                </LinearLayout>
+                            </HorizontalScrollView>
+
+                            <com.google.android.material.textfield.TextInputLayout android:id="@id/tilBakiSearch" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" android:hint="খরিদ্দারের নাম বা ফোন নম্বর দিয়ে খুঁজুন..." app:boxStrokeColor="#ff64748b" app:boxStrokeWidth="1.0dip" app:boxStrokeWidthFocused="2.0dip" app:hintTextColor="#ff64748b" app:startIconDrawable="@drawable/ic_search" app:startIconTint="#ff64748b" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                                 <com.google.android.material.textfield.TextInputEditText android:textSize="13.0sp" android:textColor="#ff0f172a" android:id="@id/etBakiSearch" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="text" />
                             </com.google.android.material.textfield.TextInputLayout>
                             <LinearLayout android:gravity="center" android:orientation="vertical" android:id="@id/layoutBakiEmptyState" android:padding="32.0dip" android:visibility="visible" android:layout_width="fill_parent" android:layout_height="wrap_content">

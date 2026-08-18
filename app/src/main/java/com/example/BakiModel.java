@@ -1,14 +1,21 @@
 package com.example;
 
-/* loaded from: classes5.dex */
-public class BakiModel {
-    private double amount;
-    private String customerName;
-    private String date;
-    private String details;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class BakiModel implements Serializable {
     private String id;
+    private String customerName;
+    private String phone;
+    private double amount;
+    private String date;
+    private String dueDate;
+    private String details;
+    private List<BakiTransaction> transactions;
 
     public BakiModel() {
+        this.transactions = new ArrayList<>();
     }
 
     public BakiModel(String id, String customerName, double amount, String date, String details) {
@@ -17,6 +24,20 @@ public class BakiModel {
         this.amount = amount;
         this.date = date;
         this.details = details;
+        this.phone = "";
+        this.dueDate = "";
+        this.transactions = new ArrayList<>();
+    }
+
+    public BakiModel(String id, String customerName, String phone, double amount, String date, String dueDate, String details) {
+        this.id = id;
+        this.customerName = customerName;
+        this.phone = phone != null ? phone : "";
+        this.amount = amount;
+        this.date = date;
+        this.dueDate = dueDate != null ? dueDate : "";
+        this.details = details;
+        this.transactions = new ArrayList<>();
     }
 
     public String getId() {
@@ -35,6 +56,14 @@ public class BakiModel {
         this.customerName = customerName;
     }
 
+    public String getPhone() {
+        return this.phone != null ? this.phone : "";
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone != null ? phone : "";
+    }
+
     public double getAmount() {
         return this.amount;
     }
@@ -51,11 +80,37 @@ public class BakiModel {
         this.date = date;
     }
 
+    public String getDueDate() {
+        return this.dueDate != null ? this.dueDate : "";
+    }
+
+    public void setDueDate(String dueDate) {
+        this.dueDate = dueDate != null ? dueDate : "";
+    }
+
     public String getDetails() {
         return this.details;
     }
 
     public void setDetails(String details) {
         this.details = details;
+    }
+
+    public List<BakiTransaction> getTransactions() {
+        if (this.transactions == null) {
+            this.transactions = new ArrayList<>();
+        }
+        return this.transactions;
+    }
+
+    public void setTransactions(List<BakiTransaction> transactions) {
+        this.transactions = transactions != null ? transactions : new ArrayList<>();
+    }
+
+    public void addTransaction(BakiTransaction transaction) {
+        if (this.transactions == null) {
+            this.transactions = new ArrayList<>();
+        }
+        this.transactions.add(transaction);
     }
 }

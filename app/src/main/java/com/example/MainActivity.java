@@ -6,10 +6,12 @@ import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -20,6 +22,7 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,6 +40,7 @@ import android.widget.CompoundButton;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Filter;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -77,6 +81,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -94,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
     private MainViewModel viewModel;
     private List<ExpenseModel> allExpenses = new ArrayList();
     private String searchFilterText = "";
+    private String currentBakiFilter = "ALL";
     private boolean isUpdatingInputs = false;
     private boolean isExpensesExpanded = false;
     private boolean isDashboardFilterThisMonth = false;
@@ -1802,19 +1808,44 @@ public class MainActivity extends AppCompatActivity {
         this.binding.etGoogleSheetsUrl.setText(sheetsSyncManager.getSheetsUrl());
 
         if (sheetsSyncManager.isConnected()) {
-            this.binding.tvLastSheetsSyncTime.setText("✅ মাওয়া স্টোর গুগল শিট সফলভাবে কনফিগার করা আছে");
+            this.binding.tvLastSheetsSyncTime.setText("✅ গুগল শিট ও ক্লাউড সিঙ্ক সক্রিয় রয়েছে");
         } else {
             this.binding.tvLastSheetsSyncTime.setText("সর্বশেষ সিঙ্ক: এখনো সিঙ্ক করা হয়নি");
         }
 
+        // Auto extract ID and GID on text paste/change to eliminate manual typing hassle
+        this.binding.etGoogleSpreadsheetId.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (s != null && s.toString().contains("http")) {
+                    String pasted = s.toString().trim();
+                    String extractedId = GoogleSheetsSyncManager.extractSpreadsheetId(pasted);
+                    String extractedGid = GoogleSheetsSyncManager.extractGid(pasted);
+                    if (binding.etGoogleSheetGid != null && (binding.etGoogleSheetGid.getText() == null || binding.etGoogleSheetGid.getText().toString().isEmpty() || "0".equals(binding.etGoogleSheetGid.getText().toString()))) {
+                        binding.etGoogleSheetGid.setText(extractedGid);
+                    }
+                }
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+
         this.binding.btnSaveSheetsUrl.setOnClickListener(v -> {
             String spreadsheetIdOrUrl = this.binding.etGoogleSpreadsheetId.getText() != null ? this.binding.etGoogleSpreadsheetId.getText().toString().trim() : "";
-            String sheetGid = this.binding.etGoogleSheetGid.getText() != null ? this.binding.etGoogleSheetGid.getText().toString().trim() : "0";
+            String sheetGid = this.binding.etGoogleSheetGid.getText() != null ? this.binding.etGoogleSheetGid.getText().toString().trim() : "";
+            if (sheetGid.isEmpty()) {
+                sheetGid = "0";
+                this.binding.etGoogleSheetGid.setText("0");
+            }
             String webAppUrl = this.binding.etGoogleSheetsUrl.getText() != null ? this.binding.etGoogleSheetsUrl.getText().toString().trim() : "";
 
             if (spreadsheetIdOrUrl.isEmpty() && webAppUrl.isEmpty()) {
-                Toast.makeText(this, "⚠️ দয়া করে গুগল স্প্রেডশিট আইডি বা লিংক দিন।", Toast.LENGTH_SHORT).show();
-                return;
+                spreadsheetIdOrUrl = GoogleSheetsSyncManager.DEFAULT_SPREADSHEET_ID;
+                this.binding.etGoogleSpreadsheetId.setText(spreadsheetIdOrUrl);
             }
 
             sheetsSyncManager.saveSheetConfig(spreadsheetIdOrUrl, sheetGid);
@@ -1824,8 +1855,8 @@ public class MainActivity extends AppCompatActivity {
 
             this.binding.etGoogleSpreadsheetId.setText(sheetsSyncManager.getSpreadsheetId());
             this.binding.etGoogleSheetGid.setText(sheetsSyncManager.getSheetGid());
-            this.binding.tvLastSheetsSyncTime.setText("✅ সেটিংস সফলভাবে সংরক্ষণ করা হয়েছে!");
-            Toast.makeText(this, "✅ মাওয়া স্টোর গুগল শিট সেটিংস সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show();
+            this.binding.tvLastSheetsSyncTime.setText("✅ গুগল শিট আইডি ও গিড সফলভাবে সক্রিয় হয়েছে!");
+            Toast.makeText(this, "✅ ডাইরেক্ট গুগল শিট আইডি ও গিড সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show();
         });
 
         this.binding.btnOpenGoogleSheet.setOnClickListener(v -> {
@@ -1988,7 +2019,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("application/json");
+                intent.setType("*/*");
                 intent.putExtra(Intent.EXTRA_TITLE, "mawa_store_backup.json");
                 startActivityForResult(intent, 2001);
             } catch (Exception e) {
@@ -2008,7 +2039,7 @@ public class MainActivity extends AppCompatActivity {
                 writer.close();
                 Uri fileUri = FileProvider.getUriForFile(this, "com.aistudio.dailycashbook.kxmpzq.fileprovider", backupFile);
                 Intent shareIntent = new Intent(Intent.ACTION_SEND);
-                shareIntent.setType("application/json");
+                shareIntent.setType("*/*");
                 shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
                 shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(Intent.createChooser(shareIntent, "মাওয়া স্টোর ব্যাকআপ ফাইল শেয়ার করুন"));
@@ -2018,22 +2049,126 @@ public class MainActivity extends AppCompatActivity {
         });
 
         this.binding.btnLocalBackupRestore.setOnClickListener(v -> {
+            String[] options = {
+                "📂 ফাইল বেছে নিন (.json / .txt সব ফাইল সাপোর্ট)",
+                "📋 সরাসরি ব্যাকআপ কোড পেস্ট করে রিস্টোর"
+            };
             new MaterialAlertDialogBuilder(this)
                     .setTitle("হিসাব রিস্টোর করুন")
-                    .setMessage("পুনরুদ্ধার বা রিস্টোর করার সময় আপনার অ্যাপের বর্তমান সব ডাটা মুছে গিয়ে রিস্টোরকৃত ফাইলের ডাটা দিয়ে প্রতিস্থাপিত হবে। আপনি কি রিস্টোর করতে চান?")
-                    .setPositiveButton("হ্যাঁ, রিস্টোর করুন", (dialog, which) -> {
-                        try {
-                            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                            intent.addCategory(Intent.CATEGORY_OPENABLE);
-                            intent.setType("application/json");
-                            startActivityForResult(intent, 2002);
-                        } catch (Exception e) {
-                            Toast.makeText(this, "ফাইল উইন্ডো খুলতে ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) {
+                            // File picker - open to ALL file types without restrictive mime filters
+                            try {
+                                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                                intent.setType("*/*");
+                                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                                startActivityForResult(Intent.createChooser(intent, "ব্যাকআপ ফাইল বেছে নিন"), 2002);
+                            } catch (Exception e) {
+                                try {
+                                    Intent intent2 = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                                    intent2.setType("*/*");
+                                    intent2.addCategory(Intent.CATEGORY_OPENABLE);
+                                    startActivityForResult(intent2, 2002);
+                                } catch (Exception ex) {
+                                    Toast.makeText(this, "ফাইল উইন্ডো খুলতে ব্যর্থ: " + ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } else {
+                            showPasteJsonRestoreDialog();
                         }
                     })
                     .setNegativeButton("বাতিল", null)
                     .show();
         });
+    }
+
+    private void showPasteJsonRestoreDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dpToPx(20), dpToPx(12), dpToPx(20), dpToPx(12));
+
+        TextView hintTv = new TextView(this);
+        hintTv.setText("আপনার ব্যাকআপ JSON টেক্সটটি নিচের বক্সে পেস্ট করুন:");
+        hintTv.setTextColor(Color.parseColor("#475569"));
+        hintTv.setTextSize(12.0f);
+        hintTv.setPadding(0, 0, 0, dpToPx(8));
+        layout.addView(hintTv);
+
+        com.google.android.material.textfield.TextInputLayout til = new com.google.android.material.textfield.TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        til.setHint("JSON ব্যাকআপ টেক্সট");
+        til.setBoxStrokeColor(Color.parseColor("#059669"));
+        til.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#059669")));
+
+        final com.google.android.material.textfield.TextInputEditText etJson = new com.google.android.material.textfield.TextInputEditText(this);
+        etJson.setTextSize(12.0f);
+        etJson.setMinLines(5);
+        etJson.setMaxLines(10);
+        etJson.setGravity(Gravity.TOP | Gravity.START);
+        til.addView(etJson);
+        layout.addView(til);
+
+        MaterialButton btnPaste = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnPaste.setText("📋 ক্লিপবোর্ড থেকে পেস্ট করুন");
+        btnPaste.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#059669")));
+        btnPaste.setTextColor(Color.parseColor("#059669"));
+        btnPaste.setCornerRadius(dpToPx(10));
+        LinearLayout.LayoutParams lpPaste = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(44));
+        lpPaste.setMargins(0, dpToPx(8), 0, 0);
+        btnPaste.setLayoutParams(lpPaste);
+        btnPaste.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip().getItemCount() > 0) {
+                CharSequence clipText = clipboard.getPrimaryClip().getItemAt(0).getText();
+                if (clipText != null) {
+                    etJson.setText(clipText.toString());
+                    Toast.makeText(this, "ক্লিপবোর্ড থেকে পেস্ট করা হয়েছে", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "ক্লিপবোর্ড খালি!", Toast.LENGTH_SHORT).show();
+            }
+        });
+        layout.addView(btnPaste);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("📋 কোড পেস্ট করে রিস্টোর")
+                .setView(layout)
+                .setPositiveButton("রিস্টোর সম্পন্ন করুন", (dialog, which) -> {
+                    String input = etJson.getText() != null ? etJson.getText().toString() : "";
+                    applyJsonRestore(input);
+                })
+                .setNegativeButton("বাতিল", null)
+                .show();
+    }
+
+    private boolean applyJsonRestore(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            Toast.makeText(this, "ব্যাকআপ ফাইল বা টেক্সট খালি!", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        try {
+            Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> backupData = new Gson().fromJson(json.trim(), mapType);
+            if (backupData != null) {
+                StorageManager.getInstance(this).importAllData(backupData);
+                this.viewModel.loadSavedData();
+                updateDashboardUI();
+                updateBakiKhataUI();
+                updateFordiKhataUI();
+                updateCloudBackupUI();
+                setupAutocomplete();
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("✅ রিস্টোর সফল হয়েছে")
+                        .setMessage("মাওয়া স্টোর এর সকল হিসাব (ক্যাশ খাতা, বাকি খাতা, ফর্দ খাতা) সুন্দরভাবে পুনরুদ্ধার সম্পন্ন হয়েছে!")
+                        .setPositiveButton("ঠিক আছে", null)
+                        .show();
+                return true;
+            }
+            Toast.makeText(this, "ব্যাকআপ ফাইলের ফরম্যাট সঠিক নয়!", Toast.LENGTH_SHORT).show();
+            return false;
+        } catch (Exception e) {
+            Toast.makeText(this, "রিস্টোর ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            return false;
+        }
     }
 
     @Override
@@ -2069,21 +2204,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     reader.close();
                     inputStream.close();
-                    String json2 = sb.toString();
-                    Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
-                    Map<String, Object> backupData = new Gson().fromJson(json2, mapType);
-                    if (backupData != null) {
-                        StorageManager.getInstance(this).importAllData(backupData);
-                        this.viewModel.loadSavedData();
-                        updateDashboardUI();
-                        new MaterialAlertDialogBuilder(this)
-                                .setTitle("লোকাল রিস্টোর সফল")
-                                .setMessage("লোকাল ব্যাকআপ ফাইল থেকে মাওয়া স্টোর এর সকল হিসাব সুন্দরভাবে পুনরুদ্ধার সম্পন্ন হয়েছে!")
-                                .setPositiveButton("ঠিক আছে", null)
-                                .show();
-                        return;
-                    }
-                    Toast.makeText(this, "ব্যাকআপ ফাইলের ফরম্যাট সঠিক নয়!", Toast.LENGTH_SHORT).show();
+                    applyJsonRestore(sb.toString());
                 }
             } catch (Exception e2) {
                 Toast.makeText(this, "লোকাল রিস্টোর ব্যর্থ: " + e2.getLocalizedMessage(), Toast.LENGTH_LONG).show();
@@ -2355,75 +2476,207 @@ public class MainActivity extends AppCompatActivity {
         if (this.binding == null) {
             return;
         }
+        setupBakiFilters();
         updateBakiKhataUI();
-        this.binding.btnSaveBakiRecord.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda54
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
-                MainActivity.this.m6992lambda$setupBakiKhata$59$comexampleMainActivity(view);
+
+        // Due date picker
+        if (this.binding.etBakiDueDate != null) {
+            this.binding.etBakiDueDate.setOnClickListener(v -> {
+                Calendar cal = Calendar.getInstance();
+                DatePickerDialog datePicker = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+                    String selected = String.format(Locale.US, "%02d/%02d/%04d", dayOfMonth, month + 1, year);
+                    MainActivity.this.binding.etBakiDueDate.setText(selected);
+                }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
+                datePicker.show();
+            });
+        }
+
+        // PDF Statement button
+        if (this.binding.btnBakiPdfReport != null) {
+            this.binding.btnBakiPdfReport.setOnClickListener(v -> {
+                StorageManager storage = StorageManager.getInstance(this);
+                List<BakiModel> allBaki = storage.loadBakiRecords();
+                if (allBaki.isEmpty()) {
+                    Toast.makeText(this, "⚠️ পিডিএফ তৈরির জন্য কোনো বাকি হিসাব পাওয়া যায়নি!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                double total = 0.0;
+                for (BakiModel m : allBaki) total += m.getAmount();
+                File pdf = PdfExporter.exportBakiReportToPdf(this, allBaki, total);
+                openPdfFile(pdf);
+            });
+        }
+
+        this.binding.btnSaveBakiRecord.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.handleSaveBakiRecord();
             }
         });
-        this.binding.etBakiSearch.addTextChangedListener(new TextWatcher() { // from class: com.example.MainActivity.23
-            @Override // android.text.TextWatcher
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
 
-            @Override // android.text.TextWatcher
+        this.binding.etBakiSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 MainActivity.this.updateBakiKhataUI();
             }
 
-            @Override // android.text.TextWatcher
-            public void afterTextChanged(Editable s) {
-            }
+            @Override
+            public void afterTextChanged(Editable s) {}
         });
     }
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$setupBakiKhata$59$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m6992lambda$setupBakiKhata$59$comexampleMainActivity(View v) {
+    private void setupBakiFilters() {
+        if (this.binding == null) return;
+        View.OnClickListener filterListener = v -> {
+            int id = v.getId();
+            if (id == R.id.btnBakiFilterAll) {
+                currentBakiFilter = "ALL";
+            } else if (id == R.id.btnBakiFilterHighest) {
+                currentBakiFilter = "HIGHEST";
+            } else if (id == R.id.btnBakiFilterOverdue) {
+                currentBakiFilter = "OVERDUE";
+            } else if (id == R.id.btnBakiFilterRecent) {
+                currentBakiFilter = "RECENT";
+            }
+            updateBakiFilterTabStyles();
+            updateBakiKhataUI();
+        };
+
+        if (this.binding.btnBakiFilterAll != null) this.binding.btnBakiFilterAll.setOnClickListener(filterListener);
+        if (this.binding.btnBakiFilterHighest != null) this.binding.btnBakiFilterHighest.setOnClickListener(filterListener);
+        if (this.binding.btnBakiFilterOverdue != null) this.binding.btnBakiFilterOverdue.setOnClickListener(filterListener);
+        if (this.binding.btnBakiFilterRecent != null) this.binding.btnBakiFilterRecent.setOnClickListener(filterListener);
+    }
+
+    private void updateBakiFilterTabStyles() {
+        if (this.binding == null) return;
+        int activeBg = R.drawable.bg_filter_tab_selected;
+        int inactiveBg = R.drawable.bg_filter_tab_unselected;
+        int activeText = Color.parseColor("#FFFFFF");
+        int inactiveText = Color.parseColor("#64748B");
+
+        if (this.binding.btnBakiFilterAll != null) {
+            boolean sel = "ALL".equals(currentBakiFilter);
+            this.binding.btnBakiFilterAll.setBackgroundResource(sel ? activeBg : inactiveBg);
+            this.binding.btnBakiFilterAll.setTextColor(sel ? activeText : inactiveText);
+        }
+        if (this.binding.btnBakiFilterHighest != null) {
+            boolean sel = "HIGHEST".equals(currentBakiFilter);
+            this.binding.btnBakiFilterHighest.setBackgroundResource(sel ? activeBg : inactiveBg);
+            this.binding.btnBakiFilterHighest.setTextColor(sel ? activeText : inactiveText);
+        }
+        if (this.binding.btnBakiFilterOverdue != null) {
+            boolean sel = "OVERDUE".equals(currentBakiFilter);
+            this.binding.btnBakiFilterOverdue.setBackgroundResource(sel ? activeBg : inactiveBg);
+            this.binding.btnBakiFilterOverdue.setTextColor(sel ? activeText : inactiveText);
+        }
+        if (this.binding.btnBakiFilterRecent != null) {
+            boolean sel = "RECENT".equals(currentBakiFilter);
+            this.binding.btnBakiFilterRecent.setBackgroundResource(sel ? activeBg : inactiveBg);
+            this.binding.btnBakiFilterRecent.setTextColor(sel ? activeText : inactiveText);
+        }
+    }
+
+    private void handleSaveBakiRecord() {
         String name = this.binding.etBakiCustomerName.getText().toString().trim();
+        String phone = this.binding.etBakiPhone != null ? this.binding.etBakiPhone.getText().toString().trim() : "";
         String amountStr = this.binding.etBakiAmount.getText().toString().trim();
         String details = this.binding.etBakiDetails.getText().toString().trim();
-        boolean isEmpty = name.isEmpty();
-        ActivityMainBinding activityMainBinding = this.binding;
-        if (isEmpty) {
-            activityMainBinding.tilBakiCustomerName.setError("খরিদ্দারের নাম লিখুন");
+        String dueDate = this.binding.etBakiDueDate != null ? this.binding.etBakiDueDate.getText().toString().trim() : "";
+
+        if (name.isEmpty()) {
+            this.binding.tilBakiCustomerName.setError("খরিদ্দারের নাম লিখুন");
             return;
         }
-        activityMainBinding.tilBakiCustomerName.setError(null);
-        boolean isEmpty2 = amountStr.isEmpty();
-        ActivityMainBinding activityMainBinding2 = this.binding;
-        if (isEmpty2) {
-            activityMainBinding2.tilBakiAmount.setError("বাকির পরিমাণ লিখুন");
+        this.binding.tilBakiCustomerName.setError(null);
+
+        if (amountStr.isEmpty()) {
+            this.binding.tilBakiAmount.setError("বাকির পরিমাণ লিখুন");
             return;
         }
-        activityMainBinding2.tilBakiAmount.setError(null);
+        this.binding.tilBakiAmount.setError(null);
+
         try {
             double amount = Double.parseDouble(amountStr);
             if (amount <= 0.0d) {
                 this.binding.tilBakiAmount.setError("সঠিক বকেয়া সংখ্যা লিখুন");
                 return;
             }
-            String id = UUID.randomUUID().toString();
-            String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
-            BakiModel record = new BakiModel(id, name, amount, currentDate, details);
+
             StorageManager storage = StorageManager.getInstance(this);
             List<BakiModel> bakiList = storage.loadBakiRecords();
-            bakiList.add(0, record);
+
+            String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+            String currentTime = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+
+            // Check if customer already exists (by name match)
+            BakiModel existingCustomer = null;
+            for (BakiModel b : bakiList) {
+                if (b.getCustomerName() != null && b.getCustomerName().trim().equalsIgnoreCase(name)) {
+                    existingCustomer = b;
+                    break;
+                }
+            }
+
+            if (existingCustomer != null) {
+                double newTotal = existingCustomer.getAmount() + amount;
+                existingCustomer.setAmount(newTotal);
+                if (!phone.isEmpty()) existingCustomer.setPhone(phone);
+                if (!dueDate.isEmpty()) existingCustomer.setDueDate(dueDate);
+                if (!details.isEmpty()) existingCustomer.setDetails(details);
+                existingCustomer.setDate(currentDate);
+
+                BakiTransaction tx = new BakiTransaction(UUID.randomUUID().toString(), currentDate, currentTime, "BAKI", amount, details.isEmpty() ? "বাকি যোগ" : details, newTotal);
+                existingCustomer.addTransaction(tx);
+            } else {
+                String id = UUID.randomUUID().toString();
+                BakiModel record = new BakiModel(id, name, phone, amount, currentDate, dueDate, details);
+                BakiTransaction tx = new BakiTransaction(UUID.randomUUID().toString(), currentDate, currentTime, "BAKI", amount, details.isEmpty() ? "নতুন বাকি শুরু" : details, amount);
+                record.addTransaction(tx);
+                bakiList.add(0, record);
+            }
+
             storage.saveBakiRecords(bakiList);
+
             this.binding.etBakiCustomerName.setText("");
+            if (this.binding.etBakiPhone != null) this.binding.etBakiPhone.setText("");
             this.binding.etBakiAmount.setText("");
             this.binding.etBakiDetails.setText("");
+            if (this.binding.etBakiDueDate != null) this.binding.etBakiDueDate.setText("");
+
             View view = getCurrentFocus();
             if (view != null) {
                 InputMethodManager imm = (InputMethodManager) getSystemService("input_method");
                 imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
             }
-            Toast.makeText(this, "✅ বাকি হিসাব সফলভাবে যুক্ত হয়েছে!", 0).show();
+
+            Toast.makeText(this, "✅ খরিদ্দারের বাকি হিসাব সফলভাবে সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show();
             updateBakiKhataUI();
             triggerAutoCloudBackup();
         } catch (Exception e) {
             this.binding.tilBakiAmount.setError("বাকির পরিমাণ সঠিক সংখ্যা হতে হবে");
+        }
+    }
+
+    private boolean isOverdue(String dueDateStr) {
+        if (dueDateStr == null || dueDateStr.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+            Date due = sdf.parse(dueDateStr.trim());
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            Date today = cal.getTime();
+            return due != null && due.before(today);
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -2435,12 +2688,21 @@ public class MainActivity extends AppCompatActivity {
         StorageManager storage = StorageManager.getInstance(this);
         List<BakiModel> allBaki = storage.loadBakiRecords();
         double totalAmount = 0.0d;
-        Iterator<BakiModel> it = allBaki.iterator();
-        while (it.hasNext()) {
-            totalAmount += it.next().getAmount();
+        int overdueCount = 0;
+
+        for (BakiModel item : allBaki) {
+            totalAmount += item.getAmount();
+            if (item.getAmount() > 0 && isOverdue(item.getDueDate())) {
+                overdueCount++;
+            }
         }
+
         this.binding.tvTotalBakiAmount.setText(String.format(Locale.getDefault(), "৳ %,.0f", Double.valueOf(totalAmount)));
         this.binding.tvTotalBakiCustomers.setText(allBaki.size() + " জন");
+        if (this.binding.tvTotalBakiOverdue != null) {
+            this.binding.tvTotalBakiOverdue.setText(overdueCount + " জন");
+        }
+
         Set<String> uniqueNames = new HashSet<>();
         for (BakiModel item : allBaki) {
             if (item.getCustomerName() != null && !item.getCustomerName().trim().isEmpty()) {
@@ -2450,326 +2712,716 @@ public class MainActivity extends AppCompatActivity {
         List<String> suggestions = new ArrayList<>(uniqueNames);
         ArrayAdapter<String> bakiAutocompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, suggestions);
         this.binding.etBakiCustomerName.setAdapter(bakiAutocompleteAdapter);
+
         String query = this.binding.etBakiSearch.getText().toString().trim().toLowerCase();
         List<BakiModel> filteredList = new ArrayList<>();
+
         for (BakiModel item2 : allBaki) {
-            if (item2.getCustomerName().toLowerCase().contains(query)) {
+            boolean matchesSearch = item2.getCustomerName().toLowerCase().contains(query)
+                    || (item2.getPhone() != null && item2.getPhone().toLowerCase().contains(query));
+            if (!matchesSearch) continue;
+
+            if ("OVERDUE".equals(currentBakiFilter)) {
+                if (item2.getAmount() > 0 && isOverdue(item2.getDueDate())) {
+                    filteredList.add(item2);
+                }
+            } else {
                 filteredList.add(item2);
             }
         }
+
+        // Sorting
+        if ("HIGHEST".equals(currentBakiFilter)) {
+            Collections.sort(filteredList, (o1, o2) -> Double.compare(o2.getAmount(), o1.getAmount()));
+        }
+
         populateBakiList(filteredList);
     }
 
     private void populateBakiList(List<BakiModel> list) {
         this.binding.layoutBakiList.removeAllViews();
-        boolean isEmpty = list.isEmpty();
-        ActivityMainBinding activityMainBinding = this.binding;
-        int i = 0;
-        if (!isEmpty) {
-            activityMainBinding.layoutBakiEmptyState.setVisibility(8);
-            this.binding.layoutBakiList.setVisibility(0);
-            Iterator<BakiModel> it = list.iterator();
-            while (it.hasNext()) {
-                final BakiModel item = it.next();
-                MaterialCardView materialCardView = new MaterialCardView(this);
-                LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
-                cardParams.setMargins(i, i, i, dpToPx(12));
-                materialCardView.setLayoutParams(cardParams);
-                materialCardView.setRadius(dpToPx(16));
-                materialCardView.setCardElevation(dpToPx(1));
-                materialCardView.setStrokeColor(Color.parseColor("#E2E8F0"));
-                materialCardView.setStrokeWidth(dpToPx(1));
-                materialCardView.setContentPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
-                LinearLayout linearLayout = new LinearLayout(this);
-                linearLayout.setOrientation(1);
-                LinearLayout linearLayout2 = new LinearLayout(this);
-                linearLayout2.setOrientation(i);
-                linearLayout2.setGravity(16);
-                TextView avatar = new TextView(this);
-                LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(36));
-                avatarParams.setMargins(i, i, dpToPx(10), i);
-                avatar.setLayoutParams(avatarParams);
-                avatar.setGravity(17);
-                avatar.setTextColor(-1);
-                avatar.setTextSize(14.0f);
-                avatar.setTypeface(null, 1);
-                avatar.setBackground(createCircleDrawable(item.getCustomerName()));
-                avatar.setText(getInitials(item.getCustomerName()));
-                linearLayout2.addView(avatar);
-                LinearLayout textContainer = new LinearLayout(this);
-                textContainer.setOrientation(1);
-                LinearLayout.LayoutParams textContainerParams = new LinearLayout.LayoutParams(i, -2, 1.0f);
-                textContainer.setLayoutParams(textContainerParams);
-                TextView txtName = new TextView(this);
-                txtName.setText(item.getCustomerName());
-                txtName.setTextSize(14.0f);
-                txtName.setTypeface(null, 1);
-                txtName.setTextColor(Color.parseColor("#1E293B"));
-                textContainer.addView(txtName);
-                if (item.getDetails() != null && !item.getDetails().trim().isEmpty()) {
-                    TextView txtDetails = new TextView(this);
-                    txtDetails.setText("📝 " + item.getDetails());
-                    txtDetails.setTextSize(11.0f);
-                    txtDetails.setTextColor(Color.parseColor("#64748B"));
-                    txtDetails.setPadding(0, dpToPx(2), 0, 0);
-                    textContainer.addView(txtDetails);
-                }
-                TextView txtDate = new TextView(this);
-                txtDate.setText("📅 " + item.getDate());
-                txtDate.setTextSize(10.0f);
-                txtDate.setTextColor(Color.parseColor("#94A3B8"));
-                txtDate.setPadding(0, dpToPx(2), 0, 0);
-                textContainer.addView(txtDate);
-                linearLayout2.addView(textContainer);
-                TextView txtAmount = new TextView(this);
-                Iterator<BakiModel> it2 = it;
-                txtAmount.setText(String.format(Locale.getDefault(), "৳ %,.0f", Double.valueOf(item.getAmount())));
-                txtAmount.setTextSize(15.0f);
-                txtAmount.setTypeface(null, 1);
-                txtAmount.setTextColor(Color.parseColor("#DC2626"));
-                linearLayout2.addView(txtAmount);
-                linearLayout.addView(linearLayout2);
-                LinearLayout linearLayout3 = new LinearLayout(this);
-                LinearLayout.LayoutParams actionRowParams = new LinearLayout.LayoutParams(-1, -2);
-                actionRowParams.setMargins(0, dpToPx(10), 0, 0);
-                linearLayout3.setLayoutParams(actionRowParams);
-                linearLayout3.setOrientation(0);
-                linearLayout3.setGravity(GravityCompat.END);
-                MaterialButton btnPay = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonStyle);
-                btnPay.setText("জমা নিন");
-                btnPay.setTextSize(11.0f);
-                btnPay.setPadding(dpToPx(10), 0, dpToPx(10), 0);
-                LinearLayout.LayoutParams btnPayParams = new LinearLayout.LayoutParams(-2, dpToPx(34));
-                btnPayParams.setMargins(0, 0, dpToPx(8), 0);
-                btnPay.setLayoutParams(btnPayParams);
-                btnPay.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#059669")));
-                btnPay.setTextColor(-1);
-                btnPay.setCornerRadius(dpToPx(8));
-                btnPay.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda60
-                    @Override // android.view.View.OnClickListener
-                    public final void onClick(View view) {
-                        MainActivity.this.m6985lambda$populateBakiList$60$comexampleMainActivity(item, view);
-                    }
-                });
-                linearLayout3.addView(btnPay);
-                MaterialButton btnAddDue = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                btnAddDue.setText("+ বাকি");
-                btnAddDue.setTextSize(11.0f);
-                btnAddDue.setPadding(dpToPx(8), 0, dpToPx(8), 0);
-                LinearLayout.LayoutParams btnAddDueParams = new LinearLayout.LayoutParams(-2, dpToPx(34));
-                btnAddDueParams.setMargins(0, 0, dpToPx(8), 0);
-                btnAddDue.setLayoutParams(btnAddDueParams);
-                btnAddDue.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#EA580C")));
-                btnAddDue.setStrokeWidth(dpToPx(1));
-                btnAddDue.setTextColor(Color.parseColor("#EA580C"));
-                btnAddDue.setCornerRadius(dpToPx(8));
-                btnAddDue.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda61
-                    @Override // android.view.View.OnClickListener
-                    public final void onClick(View view) {
-                        MainActivity.this.m6986lambda$populateBakiList$61$comexampleMainActivity(item, view);
-                    }
-                });
-                linearLayout3.addView(btnAddDue);
-                MaterialButton btnShare = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                btnShare.setText("তাগাদা দিন");
-                btnShare.setTextSize(11.0f);
-                btnShare.setPadding(dpToPx(8), 0, dpToPx(8), 0);
-                LinearLayout.LayoutParams btnShareParams = new LinearLayout.LayoutParams(-2, dpToPx(34));
-                btnShareParams.setMargins(0, 0, dpToPx(8), 0);
-                btnShare.setLayoutParams(btnShareParams);
-                btnShare.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#D97706")));
-                btnShare.setStrokeWidth(dpToPx(1));
-                btnShare.setTextColor(Color.parseColor("#D97706"));
-                btnShare.setCornerRadius(dpToPx(8));
-                btnShare.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_share));
-                btnShare.setIconSize(dpToPx(12));
-                btnShare.setIconGravity(2);
-                btnShare.setIconTint(ColorStateList.valueOf(Color.parseColor("#D97706")));
-                btnShare.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda62
-                    @Override // android.view.View.OnClickListener
-                    public final void onClick(View view) {
-                        MainActivity.this.m6987lambda$populateBakiList$62$comexampleMainActivity(item, view);
-                    }
-                });
-                linearLayout3.addView(btnShare);
-                MaterialButton btnDelete = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                btnDelete.setText("");
-                LinearLayout.LayoutParams btnDeleteParams = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(34));
-                btnDelete.setLayoutParams(btnDeleteParams);
-                btnDelete.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#EF4444")));
-                btnDelete.setStrokeWidth(dpToPx(1));
-                btnDelete.setTextColor(Color.parseColor("#EF4444"));
-                btnDelete.setCornerRadius(dpToPx(8));
-                btnDelete.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_trash));
-                btnDelete.setIconSize(dpToPx(14));
-                btnDelete.setIconPadding(0);
-                btnDelete.setIconGravity(2);
-                btnDelete.setIconTint(ColorStateList.valueOf(Color.parseColor("#EF4444")));
-                btnDelete.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda63
-                    @Override // android.view.View.OnClickListener
-                    public final void onClick(View view) {
-                        MainActivity.this.m6988lambda$populateBakiList$63$comexampleMainActivity(item, view);
-                    }
-                });
-                linearLayout3.addView(btnDelete);
-                linearLayout.addView(linearLayout3);
-                materialCardView.addView(linearLayout);
-                this.binding.layoutBakiList.addView(materialCardView);
-                it = it2;
-                i = 0;
-            }
+        if (list.isEmpty()) {
+            this.binding.layoutBakiEmptyState.setVisibility(View.VISIBLE);
+            this.binding.layoutBakiList.setVisibility(View.GONE);
             return;
         }
-        activityMainBinding.layoutBakiEmptyState.setVisibility(0);
-        this.binding.layoutBakiList.setVisibility(8);
+
+        this.binding.layoutBakiEmptyState.setVisibility(View.GONE);
+        this.binding.layoutBakiList.setVisibility(View.VISIBLE);
+
+        for (final BakiModel item : list) {
+            MaterialCardView card = new MaterialCardView(this);
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cardParams.setMargins(0, 0, 0, dpToPx(12));
+            card.setLayoutParams(cardParams);
+            card.setRadius(dpToPx(16));
+            card.setCardElevation(dpToPx(1));
+            card.setStrokeColor(Color.parseColor("#E2E8F0"));
+            card.setStrokeWidth(dpToPx(1));
+            card.setContentPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+
+            LinearLayout mainLayout = new LinearLayout(this);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+
+            // Top Row: Avatar, Name & Phone, Due Amount
+            LinearLayout topRow = new LinearLayout(this);
+            topRow.setOrientation(LinearLayout.HORIZONTAL);
+            topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            // Avatar
+            TextView avatar = new TextView(this);
+            LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
+            avatarParams.setMargins(0, 0, dpToPx(10), 0);
+            avatar.setLayoutParams(avatarParams);
+            avatar.setGravity(Gravity.CENTER);
+            avatar.setTextColor(Color.WHITE);
+            avatar.setTextSize(15.0f);
+            avatar.setTypeface(null, Typeface.BOLD);
+            avatar.setBackground(createCircleDrawable(item.getCustomerName()));
+            avatar.setText(getInitials(item.getCustomerName()));
+            topRow.addView(avatar);
+
+            // Text Info Container
+            LinearLayout textContainer = new LinearLayout(this);
+            textContainer.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+            textContainer.setLayoutParams(textParams);
+
+            TextView txtName = new TextView(this);
+            txtName.setText(item.getCustomerName());
+            txtName.setTextSize(14.5f);
+            txtName.setTypeface(null, Typeface.BOLD);
+            txtName.setTextColor(Color.parseColor("#0F172A"));
+            textContainer.addView(txtName);
+
+            if (item.getPhone() != null && !item.getPhone().trim().isEmpty()) {
+                TextView txtPhone = new TextView(this);
+                txtPhone.setText("📞 " + item.getPhone());
+                txtPhone.setTextSize(12.0f);
+                txtPhone.setTextColor(Color.parseColor("#2563EB"));
+                txtPhone.setPadding(0, dpToPx(1), 0, 0);
+                txtPhone.setOnClickListener(v -> makeCustomerCall(item));
+                textContainer.addView(txtPhone);
+            }
+
+            if (item.getDetails() != null && !item.getDetails().trim().isEmpty()) {
+                TextView txtDetails = new TextView(this);
+                txtDetails.setText("📝 " + item.getDetails());
+                txtDetails.setTextSize(11.0f);
+                txtDetails.setTextColor(Color.parseColor("#64748B"));
+                txtDetails.setPadding(0, dpToPx(2), 0, 0);
+                textContainer.addView(txtDetails);
+            }
+
+            // Date & Overdue Badge Row
+            LinearLayout metaRow = new LinearLayout(this);
+            metaRow.setOrientation(LinearLayout.HORIZONTAL);
+            metaRow.setGravity(Gravity.CENTER_VERTICAL);
+            metaRow.setPadding(0, dpToPx(2), 0, 0);
+
+            TextView txtDate = new TextView(this);
+            txtDate.setText("📅 " + item.getDate());
+            txtDate.setTextSize(10.5f);
+            txtDate.setTextColor(Color.parseColor("#94A3B8"));
+            metaRow.addView(txtDate);
+
+            if (item.getDueDate() != null && !item.getDueDate().trim().isEmpty()) {
+                boolean overdue = isOverdue(item.getDueDate());
+                TextView txtDueDate = new TextView(this);
+                txtDueDate.setText(overdue ? " • ⚠️ মেয়াদ শেষ (" + item.getDueDate() + ")" : " • ⏰ মেয়াদ: " + item.getDueDate());
+                txtDueDate.setTextSize(10.5f);
+                txtDueDate.setTextColor(Color.parseColor(overdue ? "#DC2626" : "#D97706"));
+                txtDueDate.setTypeface(null, overdue ? Typeface.BOLD : Typeface.NORMAL);
+                metaRow.addView(txtDueDate);
+            }
+
+            textContainer.addView(metaRow);
+            topRow.addView(textContainer);
+
+            // Right side: Due Amount & Tx count
+            LinearLayout amountContainer = new LinearLayout(this);
+            amountContainer.setOrientation(LinearLayout.VERTICAL);
+            amountContainer.setGravity(Gravity.END);
+
+            TextView txtAmount = new TextView(this);
+            txtAmount.setText(String.format(Locale.getDefault(), "৳ %,.0f", Double.valueOf(item.getAmount())));
+            txtAmount.setTextSize(16.0f);
+            txtAmount.setTypeface(null, Typeface.BOLD);
+            txtAmount.setTextColor(Color.parseColor(item.getAmount() > 0 ? "#DC2626" : "#059669"));
+            amountContainer.addView(txtAmount);
+
+            int txCount = item.getTransactions() != null ? item.getTransactions().size() : 0;
+            if (txCount > 0) {
+                TextView txtTxCount = new TextView(this);
+                txtTxCount.setText(toBengaliDigits(String.valueOf(txCount)) + "টি লেনদেন");
+                txtTxCount.setTextSize(10.0f);
+                txtTxCount.setTextColor(Color.parseColor("#94A3B8"));
+                amountContainer.addView(txtTxCount);
+            }
+
+            topRow.addView(amountContainer);
+            mainLayout.addView(topRow);
+
+            // Divider
+            View divider = new View(this);
+            divider.setBackgroundColor(Color.parseColor("#F1F5F9"));
+            LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(1));
+            divParams.setMargins(0, dpToPx(10), 0, dpToPx(8));
+            divider.setLayoutParams(divParams);
+            mainLayout.addView(divider);
+
+            // Action Buttons Row (Horizontal Scrollable for clean accessibility)
+            HorizontalScrollView actionScroll = new HorizontalScrollView(this);
+            actionScroll.setHorizontalScrollBarEnabled(false);
+
+            LinearLayout actionRow = new LinearLayout(this);
+            actionRow.setOrientation(LinearLayout.HORIZONTAL);
+            actionRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            // 1. Pay (জমা নিন) Button
+            MaterialButton btnPay = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonStyle);
+            btnPay.setText("জমা নিন");
+            btnPay.setTextSize(11.0f);
+            btnPay.setPadding(dpToPx(10), 0, dpToPx(10), 0);
+            LinearLayout.LayoutParams btnPayParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(34));
+            btnPayParams.setMargins(0, 0, dpToPx(6), 0);
+            btnPay.setLayoutParams(btnPayParams);
+            btnPay.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#059669")));
+            btnPay.setTextColor(Color.WHITE);
+            btnPay.setCornerRadius(dpToPx(8));
+            btnPay.setOnClickListener(v -> showReceivePaymentDialog(item));
+            actionRow.addView(btnPay);
+
+            // 2. Add Due (+ বাকি) Button
+            MaterialButton btnAddDue = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btnAddDue.setText("+ বাকি");
+            btnAddDue.setTextSize(11.0f);
+            btnAddDue.setPadding(dpToPx(8), 0, dpToPx(8), 0);
+            LinearLayout.LayoutParams btnAddDueParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(34));
+            btnAddDueParams.setMargins(0, 0, dpToPx(6), 0);
+            btnAddDue.setLayoutParams(btnAddDueParams);
+            btnAddDue.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#EA580C")));
+            btnAddDue.setStrokeWidth(dpToPx(1));
+            btnAddDue.setTextColor(Color.parseColor("#EA580C"));
+            btnAddDue.setCornerRadius(dpToPx(8));
+            btnAddDue.setOnClickListener(v -> showAddMoreBakiDialog(item));
+            actionRow.addView(btnAddDue);
+
+            // 3. Ledger History (খতিয়ান) Button
+            MaterialButton btnLedger = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btnLedger.setText("খতিয়ান");
+            btnLedger.setTextSize(11.0f);
+            btnLedger.setPadding(dpToPx(8), 0, dpToPx(8), 0);
+            LinearLayout.LayoutParams btnLedgerParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(34));
+            btnLedgerParams.setMargins(0, 0, dpToPx(6), 0);
+            btnLedger.setLayoutParams(btnLedgerParams);
+            btnLedger.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#6366F1")));
+            btnLedger.setStrokeWidth(dpToPx(1));
+            btnLedger.setTextColor(Color.parseColor("#6366F1"));
+            btnLedger.setCornerRadius(dpToPx(8));
+            btnLedger.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_notebook));
+            btnLedger.setIconSize(dpToPx(12));
+            btnLedger.setIconTint(ColorStateList.valueOf(Color.parseColor("#6366F1")));
+            btnLedger.setOnClickListener(v -> showCustomerLedgerDialog(item));
+            actionRow.addView(btnLedger);
+
+            // 4. Call (কল) Button
+            MaterialButton btnCall = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btnCall.setText("কল");
+            btnCall.setTextSize(11.0f);
+            btnCall.setPadding(dpToPx(8), 0, dpToPx(8), 0);
+            LinearLayout.LayoutParams btnCallParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(34));
+            btnCallParams.setMargins(0, 0, dpToPx(6), 0);
+            btnCall.setLayoutParams(btnCallParams);
+            btnCall.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#2563EB")));
+            btnCall.setStrokeWidth(dpToPx(1));
+            btnCall.setTextColor(Color.parseColor("#2563EB"));
+            btnCall.setCornerRadius(dpToPx(8));
+            btnCall.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_phone_call));
+            btnCall.setIconSize(dpToPx(12));
+            btnCall.setIconTint(ColorStateList.valueOf(Color.parseColor("#2563EB")));
+            btnCall.setOnClickListener(v -> makeCustomerCall(item));
+            actionRow.addView(btnCall);
+
+            // 5. WhatsApp / Reminder (তাগাদা) Button
+            MaterialButton btnShare = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btnShare.setText("তাগাদা");
+            btnShare.setTextSize(11.0f);
+            btnShare.setPadding(dpToPx(8), 0, dpToPx(8), 0);
+            LinearLayout.LayoutParams btnShareParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(34));
+            btnShareParams.setMargins(0, 0, dpToPx(6), 0);
+            btnShare.setLayoutParams(btnShareParams);
+            btnShare.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#D97706")));
+            btnShare.setStrokeWidth(dpToPx(1));
+            btnShare.setTextColor(Color.parseColor("#D97706"));
+            btnShare.setCornerRadius(dpToPx(8));
+            btnShare.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_share));
+            btnShare.setIconSize(dpToPx(12));
+            btnShare.setIconTint(ColorStateList.valueOf(Color.parseColor("#D97706")));
+            btnShare.setOnClickListener(v -> shareBakiReminder(item));
+            actionRow.addView(btnShare);
+
+            // 6. Delete Button
+            MaterialButton btnDelete = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btnDelete.setText("");
+            LinearLayout.LayoutParams btnDeleteParams = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(34));
+            btnDelete.setLayoutParams(btnDeleteParams);
+            btnDelete.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#EF4444")));
+            btnDelete.setStrokeWidth(dpToPx(1));
+            btnDelete.setCornerRadius(dpToPx(8));
+            btnDelete.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_trash));
+            btnDelete.setIconSize(dpToPx(14));
+            btnDelete.setIconPadding(0);
+            btnDelete.setIconTint(ColorStateList.valueOf(Color.parseColor("#EF4444")));
+            btnDelete.setOnClickListener(v -> deleteBakiRecord(item));
+            actionRow.addView(btnDelete);
+
+            actionScroll.addView(actionRow);
+            mainLayout.addView(actionScroll);
+
+            card.addView(mainLayout);
+            this.binding.layoutBakiList.addView(card);
+        }
     }
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$populateBakiList$60$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m6985lambda$populateBakiList$60$comexampleMainActivity(BakiModel item, View v) {
-        showReceivePaymentDialog(item);
-    }
+    private void showAddMoreBakiDialog(final BakiModel item) {
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = dpToPx(20);
+        container.setPadding(padding, padding, padding, padding);
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$populateBakiList$61$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m6986lambda$populateBakiList$61$comexampleMainActivity(BakiModel item, View v) {
-        this.binding.etBakiCustomerName.setText(item.getCustomerName());
-        this.binding.etBakiCustomerName.setSelection(item.getCustomerName().length());
-        this.binding.etBakiAmount.requestFocus();
-        this.binding.nestedScrollView.smoothScrollTo(0, this.binding.layoutBakiKhata.getTop());
-        Toast.makeText(this, "✍️ " + item.getCustomerName() + " এর জন্য নতুন বাকি হিসাব লিখতে এমাউন্ট দিন।", 0).show();
-    }
+        TextInputLayout tilAmt = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilAmt.setHint("নতুন বাকি টাকার পরিমাণ (৳)");
+        tilAmt.setBoxStrokeColor(Color.parseColor("#EA580C"));
+        tilAmt.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#EA580C")));
+        final TextInputEditText etAmt = new TextInputEditText(this);
+        etAmt.setInputType(EditorInfo.TYPE_CLASS_NUMBER | EditorInfo.TYPE_NUMBER_FLAG_DECIMAL);
+        tilAmt.addView(etAmt);
+        container.addView(tilAmt);
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$populateBakiList$62$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m6987lambda$populateBakiList$62$comexampleMainActivity(BakiModel item, View v) {
-        shareBakiReminder(item);
-    }
+        TextInputLayout tilNote = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilNote.setHint("মালের বিবরণ বা নোট (ঐচ্ছিক)");
+        tilNote.setBoxStrokeColor(Color.parseColor("#EA580C"));
+        tilNote.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#EA580C")));
+        LinearLayout.LayoutParams noteParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        noteParams.setMargins(0, dpToPx(10), 0, 0);
+        tilNote.setLayoutParams(noteParams);
+        final TextInputEditText etNote = new TextInputEditText(this);
+        tilNote.addView(etNote);
+        container.addView(tilNote);
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$populateBakiList$63$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m6988lambda$populateBakiList$63$comexampleMainActivity(BakiModel item, View v) {
-        deleteBakiRecord(item);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("➕ নতুন বাকি যোগ করুন")
+                .setMessage("গ্রাহক '" + item.getCustomerName() + "' এর হিসাবে আরও বাকি যোগ করতে বিবরণ দিন।")
+                .setView(container)
+                .setPositiveButton("বাকি যোগ করুন", (dialog, which) -> {
+                    String amtStr = etAmt.getText().toString().trim();
+                    String note = etNote.getText().toString().trim();
+                    if (amtStr.isEmpty()) return;
+                    try {
+                        double addVal = Double.parseDouble(amtStr);
+                        if (addVal <= 0) return;
+
+                        StorageManager storage = StorageManager.getInstance(MainActivity.this);
+                        List<BakiModel> list = storage.loadBakiRecords();
+                        for (BakiModel b : list) {
+                            if (b.getId().equals(item.getId())) {
+                                double newBal = b.getAmount() + addVal;
+                                b.setAmount(newBal);
+                                String curDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+                                String curTime = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+                                b.setDate(curDate);
+                                if (!note.isEmpty()) b.setDetails(note);
+
+                                BakiTransaction tx = new BakiTransaction(UUID.randomUUID().toString(), curDate, curTime, "BAKI", addVal, note.isEmpty() ? "বাকি যোগ" : note, newBal);
+                                b.addTransaction(tx);
+                                break;
+                            }
+                        }
+                        storage.saveBakiRecords(list);
+                        Toast.makeText(MainActivity.this, "✅ ৳ " + PdfExporter.formatBengaliNumber(addVal) + " বাকি হিসাবে যোগ করা হয়েছে!", Toast.LENGTH_SHORT).show();
+                        updateBakiKhataUI();
+                        triggerAutoCloudBackup();
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "⚠️ সঠিক টাকার পরিমাণ লিখুন", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("বাতিল", null)
+                .show();
     }
 
     private void showReceivePaymentDialog(final BakiModel item) {
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = dpToPx(20);
+        container.setPadding(padding, padding, padding, padding);
+
         TextInputLayout til = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
         til.setHint("পরিশোধকৃত টাকা (৳)");
         til.setBoxStrokeColor(Color.parseColor("#059669"));
         til.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#059669")));
         final TextInputEditText et = new TextInputEditText(this);
-        et.setInputType(8194);
+        et.setInputType(EditorInfo.TYPE_CLASS_NUMBER | EditorInfo.TYPE_NUMBER_FLAG_DECIMAL);
         et.setText(String.format(Locale.US, "%.0f", Double.valueOf(item.getAmount())));
         til.addView(et);
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(1);
-        int padding = dpToPx(20);
-        container.setPadding(padding, padding, padding, padding);
         container.addView(til);
-        new MaterialAlertDialogBuilder(this).setTitle((CharSequence) "💵 বাকি টাকা জমা নিন").setMessage((CharSequence) ("গ্রাহক '" + item.getCustomerName() + "' থেকে কত টাকা জমা পেয়েছেন তা লিখুন।")).setView((View) container).setPositiveButton((CharSequence) "জমা করুন", new DialogInterface.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda4
-            @Override // android.content.DialogInterface.OnClickListener
-            public final void onClick(DialogInterface dialogInterface, int i) {
-                MainActivity.this.m7045lambda$showReceivePaymentDialog$64$comexampleMainActivity(et, item, dialogInterface, i);
-            }
-        }).setNegativeButton((CharSequence) "বাতিল", (DialogInterface.OnClickListener) null).show();
+
+        TextInputLayout tilNote = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilNote.setHint("পরিশোধের নোট (যেমন: নগদ পরিশোধ / বিকাশ)");
+        tilNote.setBoxStrokeColor(Color.parseColor("#059669"));
+        tilNote.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#059669")));
+        LinearLayout.LayoutParams noteParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        noteParams.setMargins(0, dpToPx(10), 0, 0);
+        tilNote.setLayoutParams(noteParams);
+        final TextInputEditText etNote = new TextInputEditText(this);
+        etNote.setText("নগদ পরিশোধ");
+        tilNote.addView(etNote);
+        container.addView(tilNote);
+
+        final CheckBox cbCashIn = new CheckBox(this);
+        cbCashIn.setText("☑️ আজকের ক্যাশ হিসেবে (বেচায়) যোগ করুন");
+        cbCashIn.setChecked(true);
+        cbCashIn.setTextColor(Color.parseColor("#1E293B"));
+        cbCashIn.setTextSize(12.5f);
+        LinearLayout.LayoutParams cbParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cbParams.setMargins(0, dpToPx(12), 0, 0);
+        cbCashIn.setLayoutParams(cbParams);
+        container.addView(cbCashIn);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("💵 বাকি টাকা জমা নিন")
+                .setMessage("গ্রাহক '" + item.getCustomerName() + "' থেকে কত টাকা জমা পেয়েছেন তা লিখুন।")
+                .setView(container)
+                .setPositiveButton("জমা করুন", (dialogInterface, which) -> {
+                    String valStr = et.getText().toString().trim();
+                    String note = etNote.getText().toString().trim();
+                    if (valStr.isEmpty()) return;
+                    try {
+                        double val = Double.parseDouble(valStr);
+                        if (val <= 0.0d) {
+                            Toast.makeText(MainActivity.this, "⚠️ ভুল এমাউন্ট প্রবেশ করানো হয়েছে।", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        StorageManager storage = StorageManager.getInstance(MainActivity.this);
+                        List<BakiModel> bakiList = storage.loadBakiRecords();
+                        int targetIndex = -1;
+                        for (int i = 0; i < bakiList.size(); i++) {
+                            if (bakiList.get(i).getId().equals(item.getId())) {
+                                targetIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (targetIndex != -1) {
+                            BakiModel b = bakiList.get(targetIndex);
+                            double newAmt = Math.max(0.0, b.getAmount() - val);
+                            b.setAmount(newAmt);
+                            String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+                            String currentTime = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+                            b.setDate(currentDate);
+
+                            BakiTransaction tx = new BakiTransaction(UUID.randomUUID().toString(), currentDate, currentTime, "JOMA", val, note.isEmpty() ? "টাকা জমা" : note, newAmt);
+                            b.addTransaction(tx);
+
+                            // Link to daily cash book if checked
+                            if (cbCashIn.isChecked() && MainActivity.this.viewModel != null) {
+                                double curAvail = MainActivity.this.viewModel.getAvailableCash().getValue() != null ? MainActivity.this.viewModel.getAvailableCash().getValue().doubleValue() : 0.0;
+                                MainActivity.this.viewModel.setAvailableCash(curAvail + val);
+                            }
+
+                            storage.saveBakiRecords(bakiList);
+
+                            if (newAmt <= 0.0d) {
+                                Toast.makeText(MainActivity.this, "🎉 গ্রাহকের সমস্ত বাকি পরিশোধ সম্পন্ন হয়েছে!", Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(MainActivity.this, "✅ ৳ " + PdfExporter.formatBengaliNumber(val) + " টাকা জমা নেওয়া হয়েছে!", Toast.LENGTH_SHORT).show();
+                            }
+
+                            updateBakiKhataUI();
+                            triggerAutoCloudBackup();
+                        }
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "⚠️ সঠিক সংখ্যা লিখুন।", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("বাতিল", null)
+                .show();
     }
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$showReceivePaymentDialog$64$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m7045lambda$showReceivePaymentDialog$64$comexampleMainActivity(TextInputEditText et, BakiModel item, DialogInterface dialog, int which) {
-        String valStr = et.getText().toString().trim();
-        if (valStr.isEmpty()) {
-            return;
+    private void showCustomerLedgerDialog(final BakiModel customer) {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dpToPx(16);
+        root.setPadding(pad, pad, pad, pad);
+
+        // Customer Mini Card
+        MaterialCardView infoCard = new MaterialCardView(this);
+        infoCard.setRadius(dpToPx(12));
+        infoCard.setCardBackgroundColor(Color.parseColor("#FFF7ED"));
+        infoCard.setStrokeColor(Color.parseColor("#FED7AA"));
+        infoCard.setStrokeWidth(dpToPx(1));
+        infoCard.setContentPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+
+        LinearLayout infoLayout = new LinearLayout(this);
+        infoLayout.setOrientation(LinearLayout.VERTICAL);
+
+        TextView tvName = new TextView(this);
+        tvName.setText("👤 খরিদ্দার: " + customer.getCustomerName());
+        tvName.setTextSize(14.0f);
+        tvName.setTypeface(null, Typeface.BOLD);
+        tvName.setTextColor(Color.parseColor("#1E293B"));
+        infoLayout.addView(tvName);
+
+        if (customer.getPhone() != null && !customer.getPhone().isEmpty()) {
+            TextView tvPhone = new TextView(this);
+            tvPhone.setText("📱 মোবাইল: " + customer.getPhone());
+            tvPhone.setTextSize(12.0f);
+            tvPhone.setTextColor(Color.parseColor("#2563EB"));
+            infoLayout.addView(tvPhone);
         }
-        try {
-            double val = Double.parseDouble(valStr);
-            if (val <= 0.0d) {
-                Toast.makeText(this, "⚠️ ভুল এমাউন্ট প্রবেশ করানো হয়েছে।", 0).show();
-                return;
+
+        TextView tvBal = new TextView(this);
+        tvBal.setText("বকেয়া পাওনা: ৳ " + PdfExporter.formatBengaliNumber(customer.getAmount()));
+        tvBal.setTextSize(14.0f);
+        tvBal.setTypeface(null, Typeface.BOLD);
+        tvBal.setTextColor(Color.parseColor("#DC2626"));
+        tvBal.setPadding(0, dpToPx(4), 0, 0);
+        infoLayout.addView(tvBal);
+
+        infoCard.addView(infoLayout);
+        root.addView(infoCard);
+
+        // Header Title
+        TextView tvHeader = new TextView(this);
+        tvHeader.setText("📜 লেনদেন ইতিহাস (খতিয়ান)");
+        tvHeader.setTextSize(13.0f);
+        tvHeader.setTypeface(null, Typeface.BOLD);
+        tvHeader.setTextColor(Color.parseColor("#334155"));
+        tvHeader.setPadding(0, dpToPx(14), 0, dpToPx(8));
+        root.addView(tvHeader);
+
+        // Scrollable Ledger List
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(240));
+        scroll.setLayoutParams(scrollParams);
+
+        LinearLayout listLayout = new LinearLayout(this);
+        listLayout.setOrientation(LinearLayout.VERTICAL);
+
+        List<BakiTransaction> txList = customer.getTransactions();
+        if (txList != null && !txList.isEmpty()) {
+            for (int i = txList.size() - 1; i >= 0; i--) {
+                BakiTransaction tx = txList.get(i);
+                boolean isJoma = "JOMA".equalsIgnoreCase(tx.getType());
+
+                MaterialCardView txCard = new MaterialCardView(this);
+                LinearLayout.LayoutParams tcParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                tcParams.setMargins(0, 0, 0, dpToPx(6));
+                txCard.setLayoutParams(tcParams);
+                txCard.setRadius(dpToPx(8));
+                txCard.setCardBackgroundColor(Color.parseColor(isJoma ? "#F0FDF4" : "#FEF2F2"));
+                txCard.setStrokeColor(Color.parseColor(isJoma ? "#BBF7D0" : "#FECACA"));
+                txCard.setStrokeWidth(dpToPx(1));
+                txCard.setContentPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
+
+                LinearLayout txRow = new LinearLayout(this);
+                txRow.setOrientation(LinearLayout.HORIZONTAL);
+                txRow.setGravity(Gravity.CENTER_VERTICAL);
+
+                LinearLayout left = new LinearLayout(this);
+                left.setOrientation(LinearLayout.VERTICAL);
+                left.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+                TextView tvType = new TextView(this);
+                tvType.setText((isJoma ? "🟢 টাকা জমা: " : "🔴 বাকি যোগ: ") + (tx.getNote() != null ? tx.getNote() : ""));
+                tvType.setTextSize(12.0f);
+                tvType.setTypeface(null, Typeface.BOLD);
+                tvType.setTextColor(Color.parseColor(isJoma ? "#16A34A" : "#DC2626"));
+                left.addView(tvType);
+
+                TextView tvTime = new TextView(this);
+                tvTime.setText("📅 " + tx.getDate() + (tx.getTime() != null ? " " + tx.getTime() : ""));
+                tvTime.setTextSize(10.5f);
+                tvTime.setTextColor(Color.parseColor("#64748B"));
+                left.addView(tvTime);
+
+                txRow.addView(left);
+
+                LinearLayout right = new LinearLayout(this);
+                right.setOrientation(LinearLayout.VERTICAL);
+                right.setGravity(Gravity.END);
+
+                TextView tvAmt = new TextView(this);
+                tvAmt.setText((isJoma ? "- ৳ " : "+ ৳ ") + PdfExporter.formatBengaliNumber(tx.getAmount()));
+                tvAmt.setTextSize(13.0f);
+                tvAmt.setTypeface(null, Typeface.BOLD);
+                tvAmt.setTextColor(Color.parseColor(isJoma ? "#16A34A" : "#DC2626"));
+                right.addView(tvAmt);
+
+                TextView tvBalAfter = new TextView(this);
+                tvBalAfter.setText("অবশিষ্ট: ৳ " + PdfExporter.formatBengaliNumber(tx.getBalanceAfter()));
+                tvBalAfter.setTextSize(10.0f);
+                tvBalAfter.setTextColor(Color.parseColor("#64748B"));
+                right.addView(tvBalAfter);
+
+                txRow.addView(right);
+                txCard.addView(txRow);
+                listLayout.addView(txCard);
             }
-            StorageManager storage = StorageManager.getInstance(this);
-            List<BakiModel> bakiList = storage.loadBakiRecords();
-            int targetIndex = -1;
-            int i = 0;
-            while (true) {
-                if (i >= bakiList.size()) {
-                    break;
-                }
-                if (!bakiList.get(i).getId().equals(item.getId())) {
-                    i++;
-                } else {
-                    targetIndex = i;
-                    break;
-                }
-            }
-            if (targetIndex != -1) {
-                BakiModel b = bakiList.get(targetIndex);
-                double newAmt = b.getAmount() - val;
-                if (newAmt <= 0.0d) {
-                    bakiList.remove(targetIndex);
-                    Toast.makeText(this, "🎉 গ্রাহকের সমস্ত বাকি পরিশোধ হয়েছে!", 1).show();
-                } else {
-                    b.setAmount(newAmt);
-                    String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
-                    b.setDate(currentDate);
-                    Toast.makeText(this, "✅ " + val + " টাকা জমা নেওয়া হয়েছে!", 0).show();
-                }
-                storage.saveBakiRecords(bakiList);
-                updateBakiKhataUI();
-                triggerAutoCloudBackup();
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "⚠️ সঠিক সংখ্যা লিখুন।", 0).show();
+        } else {
+            TextView emptyTx = new TextView(this);
+            emptyTx.setText("প্রাথমিক হিসাব: ৳ " + PdfExporter.formatBengaliNumber(customer.getAmount()) + " (তারিখ: " + customer.getDate() + ")");
+            emptyTx.setTextSize(12.0f);
+            emptyTx.setTextColor(Color.parseColor("#64748B"));
+            emptyTx.setPadding(0, dpToPx(10), 0, dpToPx(10));
+            listLayout.addView(emptyTx);
+        }
+
+        scroll.addView(listLayout);
+        root.addView(scroll);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("📋 খরিদ্দার খতিয়ান বিবরণ")
+                .setView(root)
+                .setPositiveButton("📄 PDF ডাউনলোড", (dialog, which) -> {
+                    File pdf = PdfExporter.exportCustomerLedgerToPdf(MainActivity.this, customer);
+                    openPdfFile(pdf);
+                })
+                .setNeutralButton("💬 হোয়াটসঅ্যাপ স্লিপ", (dialog, which) -> {
+                    shareBakiReminder(customer);
+                })
+                .setNegativeButton("বন্ধ করুন", null)
+                .show();
+    }
+
+    private void makeCustomerCall(BakiModel item) {
+        if (item.getPhone() != null && !item.getPhone().trim().isEmpty()) {
+            Intent callIntent = new Intent(Intent.ACTION_DIAL);
+            callIntent.setData(Uri.parse("tel:" + item.getPhone().trim()));
+            startActivity(callIntent);
+        } else {
+            // Prompt to add phone number
+            final TextInputEditText etPhone = new TextInputEditText(this);
+            etPhone.setInputType(EditorInfo.TYPE_CLASS_PHONE);
+            TextInputLayout til = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+            til.setHint("মোবাইল নম্বর লিখুন");
+            til.addView(etPhone);
+            LinearLayout container = new LinearLayout(this);
+            container.setPadding(dpToPx(20), dpToPx(10), dpToPx(20), dpToPx(10));
+            container.addView(til);
+
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("📞 মোবাইল নম্বর যুক্ত করুন")
+                    .setMessage("গ্রাহক '" + item.getCustomerName() + "' এর কোনো ফোন নম্বর সংরক্ষিত নেই।")
+                    .setView(container)
+                    .setPositiveButton("সংরক্ষণ ও কল", (dialog, which) -> {
+                        String ph = etPhone.getText().toString().trim();
+                        if (!ph.isEmpty()) {
+                            StorageManager storage = StorageManager.getInstance(MainActivity.this);
+                            List<BakiModel> list = storage.loadBakiRecords();
+                            for (BakiModel b : list) {
+                                if (b.getId().equals(item.getId())) {
+                                    b.setPhone(ph);
+                                    break;
+                                }
+                            }
+                            storage.saveBakiRecords(list);
+                            updateBakiKhataUI();
+                            Intent callIntent = new Intent(Intent.ACTION_DIAL);
+                            callIntent.setData(Uri.parse("tel:" + ph));
+                            startActivity(callIntent);
+                        }
+                    })
+                    .setNegativeButton("বাতিল", null)
+                    .show();
         }
     }
 
     private void shareBakiReminder(BakiModel item) {
-        String msg = "জনাব " + item.getCustomerName() + ",\nআপনার নিকট আমাদের মোট বকেয়া পাওনার পরিমাণ: ৳ " + String.format(Locale.getDefault(), "%,.0f", Double.valueOf(item.getAmount())) + " টাকা।\nঅনুগ্রহ করে বকেয়া টাকা পরিশোধ করে সাহায্য করুন।\n\nধন্যবাদান্তে,\nআমার ক্যাশ খাতা";
+        String msg = "মাওয়া স্টোর - বকেয়া তাগাদা\n\n"
+                + "জনাব " + item.getCustomerName() + ",\n"
+                + "আপনার নিকট মাওয়া স্টোর এর মোট বকেয়া পাওনার পরিমাণ: ৳ " + PdfExporter.formatBengaliNumber(item.getAmount()) + " টাকা।\n";
+
+        if (item.getDueDate() != null && !item.getDueDate().trim().isEmpty()) {
+            msg += "পরিশোধের নির্ধারিত তারিখ: " + item.getDueDate() + "\n";
+        }
+        if (item.getDetails() != null && !item.getDetails().trim().isEmpty()) {
+            msg += "মালের বিবরণ: " + item.getDetails() + "\n";
+        }
+
+        msg += "\nঅনুগ্রহ করে বকেয়া টাকা পরিশোধ করে আমাদের ব্যবসা পরিচালনায় সহযোগিতা করুন।\n\n"
+                + "ধন্যবাদান্তে,\n"
+                + "মাওয়া স্টোর\n"
+                + "প্রো: মোঃ আবুল কাশেম\n"
+                + "ফেনী রোড, দাগনভূঞা, ফেনী।";
+
         ClipboardManager clipboard = (ClipboardManager) getSystemService("clipboard");
         ClipData clip = ClipData.newPlainText("Baki Reminder", msg);
         clipboard.setPrimaryClip(clip);
-        Toast.makeText(this, "✅ তাগাদা মেসেজ কপি করা হয়েছে!", 0).show();
+        Toast.makeText(this, "✅ তাগাদা মেসেজ কপি করা হয়েছে!", Toast.LENGTH_SHORT).show();
+
+        // If phone number exists, try direct WhatsApp intent or standard share chooser
+        if (item.getPhone() != null && !item.getPhone().trim().isEmpty()) {
+            String cleanPhone = item.getPhone().trim().replaceAll("[^0-9]", "");
+            if (cleanPhone.startsWith("01")) {
+                cleanPhone = "88" + cleanPhone;
+            }
+            try {
+                Intent waIntent = new Intent(Intent.ACTION_VIEW);
+                waIntent.setData(Uri.parse("https://api.whatsapp.com/send?phone=" + cleanPhone + "&text=" + Uri.encode(msg)));
+                startActivity(waIntent);
+                return;
+            } catch (Exception ignored) {
+            }
+        }
+
         Intent sendIntent = new Intent();
-        sendIntent.setAction("android.intent.action.SEND");
-        sendIntent.putExtra("android.intent.extra.TEXT", msg);
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, msg);
         sendIntent.setType("text/plain");
         startActivity(Intent.createChooser(sendIntent, "তাগাদা মেসেজ পাঠান"));
     }
 
-    private void deleteBakiRecord(final BakiModel item) {
-        new MaterialAlertDialogBuilder(this).setTitle((CharSequence) "⚠️ হিসাব মুছে ফেলবেন?").setMessage((CharSequence) ("আপনি কি নিশ্চিতভাবে '" + item.getCustomerName() + "' এর এই বাকি হিসাবটি মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না।")).setPositiveButton((CharSequence) "হ্যাঁ, মুছুন", new DialogInterface.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda38
-            @Override // android.content.DialogInterface.OnClickListener
-            public final void onClick(DialogInterface dialogInterface, int i) {
-                MainActivity.this.m6972lambda$deleteBakiRecord$65$comexampleMainActivity(item, dialogInterface, i);
-            }
-        }).setNegativeButton((CharSequence) "বাতিল", (DialogInterface.OnClickListener) null).show();
+    private void openPdfFile(File pdfFile) {
+        if (pdfFile == null || !pdfFile.exists()) {
+            Toast.makeText(this, "পিডিএফ ফাইল তৈরি হতে সমস্যা হয়েছে!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", pdfFile);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(uri, "application/pdf");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(intent, "পিডিএফ ওপেন করুন"));
+        } catch (Exception e) {
+            Toast.makeText(this, "পিডিএফ ওপেন করতে কোনো ভিউয়ার পাওয়া যায়নি", Toast.LENGTH_SHORT).show();
+        }
     }
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$deleteBakiRecord$65$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m6972lambda$deleteBakiRecord$65$comexampleMainActivity(BakiModel item, DialogInterface dialog, int which) {
-        StorageManager storage = StorageManager.getInstance(this);
-        List<BakiModel> bakiList = storage.loadBakiRecords();
-        int targetIndex = -1;
-        int i = 0;
-        while (true) {
-            if (i >= bakiList.size()) {
-                break;
-            }
-            if (!bakiList.get(i).getId().equals(item.getId())) {
-                i++;
-            } else {
-                targetIndex = i;
-                break;
-            }
-        }
-        if (targetIndex != -1) {
-            bakiList.remove(targetIndex);
-            storage.saveBakiRecords(bakiList);
-            Toast.makeText(this, "🗑️ হিসাবটি মুছে ফেলা হয়েছে!", 0).show();
-            updateBakiKhataUI();
-            triggerAutoCloudBackup();
-        }
+    private void deleteBakiRecord(final BakiModel item) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("⚠️ হিসাব মুছে ফেলবেন?")
+                .setMessage("আপনি কি নিশ্চিতভাবে '" + item.getCustomerName() + "' এর এই বাকি হিসাবটি সম্পূর্ণ মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না।")
+                .setPositiveButton("হ্যাঁ, মুছুন", (dialogInterface, i) -> {
+                    StorageManager storage = StorageManager.getInstance(MainActivity.this);
+                    List<BakiModel> bakiList = storage.loadBakiRecords();
+                    int targetIndex = -1;
+                    for (int j = 0; j < bakiList.size(); j++) {
+                        if (bakiList.get(j).getId().equals(item.getId())) {
+                            targetIndex = j;
+                            break;
+                        }
+                    }
+                    if (targetIndex != -1) {
+                        bakiList.remove(targetIndex);
+                        storage.saveBakiRecords(bakiList);
+                        Toast.makeText(MainActivity.this, "🗑️ হিসাবটি মুছে ফেলা হয়েছে!", Toast.LENGTH_SHORT).show();
+                        updateBakiKhataUI();
+                        triggerAutoCloudBackup();
+                    }
+                })
+                .setNegativeButton("বাতিল", null)
+                .show();
     }
 
     /* JADX INFO: Access modifiers changed from: private */
@@ -2779,7 +3431,7 @@ public class MainActivity extends AppCompatActivity {
 
     private GradientDrawable createCircleDrawable(String name) {
         GradientDrawable shape = new GradientDrawable();
-        shape.setShape(1);
+        shape.setShape(GradientDrawable.OVAL);
         int hash = name != null ? name.hashCode() : 0;
         int index = Math.abs(hash) % 5;
         String[] colors = {"#EA580C", "#2563EB", "#059669", "#7C3AED", "#DB2777"};
@@ -2799,6 +3451,20 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return "B";
+    }
+
+    private String toBengaliDigits(String input) {
+        if (input == null) return "";
+        char[] bengaliDigits = {'০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'};
+        StringBuilder sb = new StringBuilder();
+        for (char c : input.toCharArray()) {
+            if (c >= '0' && c <= '9') {
+                sb.append(bengaliDigits[c - '0']);
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private void setupFordiKhata() {

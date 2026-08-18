@@ -176,6 +176,7 @@ public class StorageManager {
         }
         allData.put(KEY_BAKI_RECORDS, loadBakiRecords());
         allData.put(KEY_FORDI_RECORDS, loadFordiRecords());
+        allData.put(KEY_PRODUCT_SUGGESTIONS, getCustomProductSuggestions());
         return allData;
     }
 
@@ -186,6 +187,9 @@ public class StorageManager {
         SharedPreferences.Editor editor = this.sharedPreferences.edit();
         editor.clear();
         try {
+            if (data.containsKey(KEY_PRODUCT_SUGGESTIONS)) {
+                editor.putString(KEY_PRODUCT_SUGGESTIONS, this.gson.toJson(data.get(KEY_PRODUCT_SUGGESTIONS)));
+            }
             if (data.containsKey(KEY_BAKI_RECORDS)) {
                 editor.putString(KEY_BAKI_RECORDS, this.gson.toJson(data.get(KEY_BAKI_RECORDS)));
             }
