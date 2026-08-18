@@ -1,0 +1,6 @@
+{
+  "name": "দৈনিক ক্যাশ হিসাব",
+  "description": "ক্ষুদ্র ব্যবসা, দোকান এবং ব্যক্তিগত আয়-ব্যয় ও দৈনিক ক্যাশ লেনদেন হিসাব রাখার সহজ ও আধুনিক ডিজিটাল হিসাব খাতা।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

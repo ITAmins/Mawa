@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:gravity="center" android:height="108.0dip" android:width="108.0dip" android:drawable="@drawable/img_mawa_logo" />
+</layer-list>

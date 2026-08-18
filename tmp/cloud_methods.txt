@@ -1,0 +1,351 @@
+    public void updateCloudBackupUI() {
+        setupCloudBackup();
+    }
+
+    private void setupCloudBackup() {
+        setupGoogleSheetsSync();
+        updateUserProfileHeader();
+    }
+
+    private void updateUserProfileHeader() {
+        if (this.binding == null || this.binding.tvUserProfileHeaderName == null) return;
+        this.binding.tvUserProfileHeaderName.setText("মাওয়া স্টোর");
+        this.binding.ivUserProfileHeaderIcon.setImageResource(R.drawable.ic_cloud);
+        this.binding.ivUserProfileHeaderIcon.setImageTintList(ColorStateList.valueOf(Color.parseColor("#059669")));
+        this.binding.btnUserProfileHeader.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#ECFDF5")));
+        this.binding.btnUserProfileHeader.setOnClickListener(v -> {
+            if (this.binding.layoutCloudBackup.getVisibility() == View.VISIBLE) {
+                this.binding.layoutCloudBackup.setVisibility(View.GONE);
+                this.binding.layoutDailyLedger.setVisibility(View.VISIBLE);
+                this.binding.tabLayout.selectTab(this.binding.tabLayout.getTabAt(0));
+            } else {
+                this.binding.layoutDailyLedger.setVisibility(View.GONE);
+                this.binding.layoutDashboard.setVisibility(View.GONE);
+                this.binding.layoutBakiKhata.setVisibility(View.GONE);
+                this.binding.layoutFordiKhata.setVisibility(View.GONE);
+                this.binding.layoutCloudBackup.setVisibility(View.VISIBLE);
+                this.binding.tabLayout.selectTab(this.binding.tabLayout.getTabAt(4));
+            }
+        });
+    }
+
+    private void setupGoogleSheetsSync() {
+        final GoogleSheetsSyncManager sheetsSyncManager = GoogleSheetsSyncManager.getInstance(this);
+        this.binding.etGoogleSpreadsheetId.setText(sheetsSyncManager.getSpreadsheetId());
+        this.binding.etGoogleSheetGid.setText(sheetsSyncManager.getSheetGid());
+        this.binding.etGoogleSheetsUrl.setText(sheetsSyncManager.getSheetsUrl());
+
+        if (sheetsSyncManager.isConnected()) {
+            this.binding.tvLastSheetsSyncTime.setText("✅ মাওয়া স্টোর গুগল শিট সফলভাবে কনফিগার করা আছে");
+        } else {
+            this.binding.tvLastSheetsSyncTime.setText("সর্বশেষ সিঙ্ক: এখনো সিঙ্ক করা হয়নি");
+        }
+
+        this.binding.btnSaveSheetsUrl.setOnClickListener(v -> {
+            String spreadsheetIdOrUrl = this.binding.etGoogleSpreadsheetId.getText() != null ? this.binding.etGoogleSpreadsheetId.getText().toString().trim() : "";
+            String sheetGid = this.binding.etGoogleSheetGid.getText() != null ? this.binding.etGoogleSheetGid.getText().toString().trim() : "0";
+            String webAppUrl = this.binding.etGoogleSheetsUrl.getText() != null ? this.binding.etGoogleSheetsUrl.getText().toString().trim() : "";
+
+            if (spreadsheetIdOrUrl.isEmpty() && webAppUrl.isEmpty()) {
+                Toast.makeText(this, "⚠️ দয়া করে গুগল স্প্রেডশিট আইডি বা লিংক দিন।", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            sheetsSyncManager.saveSheetConfig(spreadsheetIdOrUrl, sheetGid);
+            if (!webAppUrl.isEmpty()) {
+                sheetsSyncManager.saveSheetsUrl(webAppUrl);
+            }
+
+            this.binding.etGoogleSpreadsheetId.setText(sheetsSyncManager.getSpreadsheetId());
+            this.binding.etGoogleSheetGid.setText(sheetsSyncManager.getSheetGid());
+            this.binding.tvLastSheetsSyncTime.setText("✅ সেটিংস সফলভাবে সংরক্ষণ করা হয়েছে!");
+            Toast.makeText(this, "✅ মাওয়া স্টোর গুগল শিট সেটিংস সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show();
+        });
+
+        this.binding.btnOpenGoogleSheet.setOnClickListener(v -> {
+            String sheetUrl = sheetsSyncManager.getSpreadsheetUrl();
+            if (sheetUrl.isEmpty()) {
+                Toast.makeText(this, "⚠️ আগে স্প্রেডশিট আইডি দিয়ে সেভ করুন!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(sheetUrl));
+                startActivity(intent);
+            } catch (Exception e) {
+                Toast.makeText(this, "ব্রাউজারে শিট খুলতে ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        this.binding.btnSyncToSheetsNow.setOnClickListener(v -> {
+            if (!sheetsSyncManager.isConnected()) {
+                Toast.makeText(this, "⚠️ আগে গুগল স্প্রেডশিট আইডি অথবা ওয়েব অ্যাপ লিংক দিন!", Toast.LENGTH_LONG).show();
+                return;
+            }
+            this.binding.progressCloudAction.setVisibility(View.VISIBLE);
+            this.binding.btnSyncToSheetsNow.setEnabled(false);
+            this.binding.btnCloudRestore.setEnabled(false);
+
+            sheetsSyncManager.syncData(this, new GoogleSheetsSyncManager.SyncCallback() {
+                @Override
+                public void onSuccess(String message) {
+                    runOnUiThread(() -> {
+                        binding.progressCloudAction.setVisibility(View.GONE);
+                        binding.btnSyncToSheetsNow.setEnabled(true);
+                        binding.btnCloudRestore.setEnabled(true);
+                        binding.tvLastSheetsSyncTime.setText("সর্বশেষ সিঙ্ক: সফল (" + new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(new Date()) + ")");
+                        new MaterialAlertDialogBuilder(MainActivity.this)
+                                .setTitle("🎉 সিঙ্ক সফল!")
+                                .setMessage(message + "\n\nমাওয়া স্টোর এর সকল হিসাব গুগল শিটে নিরাপদে সংরক্ষণ করা হয়েছে।")
+                                .setPositiveButton("ঠিক আছে", null)
+                                .show();
+                    });
+                }
+
+                @Override
+                public void onFailure(String error) {
+                    runOnUiThread(() -> {
+                        binding.progressCloudAction.setVisibility(View.GONE);
+                        binding.btnSyncToSheetsNow.setEnabled(true);
+                        binding.btnCloudRestore.setEnabled(true);
+                        new MaterialAlertDialogBuilder(MainActivity.this)
+                                .setTitle("❌ সিঙ্ক ব্যর্থ হয়েছে")
+                                .setMessage(error + "\n\n💡 সমাধান: স্প্রেডশিট আইডি বা Apps Script URL সঠিক আছে কিনা এবং শিটের এক্সেস 'Anyone with link' করা রয়েছে কিনা চেক করুন।")
+                                .setPositiveButton("ঠিক আছে", null)
+                                .show();
+                    });
+                }
+            });
+        });
+
+        this.binding.btnCloudRestore.setOnClickListener(v -> {
+            if (!sheetsSyncManager.isConnected()) {
+                Toast.makeText(this, "⚠️ আগে গুগল স্প্রেডশিট আইডি বা গিড (GID) সেট করুন!", Toast.LENGTH_LONG).show();
+                return;
+            }
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("গুগল শিট থেকে রিস্টোর")
+                    .setMessage("গুগল শিট থেকে ডাটা রিস্টোর করলে অ্যাপে শিটের সংরক্ষিত হিসাবসমূহ লোড হবে। আপনি কি রিস্টোর করতে চান?")
+                    .setPositiveButton("হ্যাঁ, রিস্টোর করুন", (dialog, which) -> {
+                        binding.progressCloudAction.setVisibility(View.VISIBLE);
+                        binding.btnSyncToSheetsNow.setEnabled(false);
+                        binding.btnCloudRestore.setEnabled(false);
+
+                        sheetsSyncManager.restoreFromGoogleSheet(this, new GoogleSheetsSyncManager.DataCallback() {
+                            @Override
+                            public void onSuccess(Map<String, Object> data) {
+                                runOnUiThread(() -> {
+                                    binding.progressCloudAction.setVisibility(View.GONE);
+                                    binding.btnSyncToSheetsNow.setEnabled(true);
+                                    binding.btnCloudRestore.setEnabled(true);
+                                    if (data != null && !data.isEmpty()) {
+                                        StorageManager.getInstance(MainActivity.this).importAllData(data);
+                                        viewModel.loadSavedData();
+                                        updateDashboardUI();
+                                        binding.tvLastSheetsSyncTime.setText("সর্বশেষ রিস্টোর: সফল (" + new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(new Date()) + ")");
+                                        new MaterialAlertDialogBuilder(MainActivity.this)
+                                                .setTitle("✅ রিস্টোর সফল!")
+                                                .setMessage("গুগল শিট থেকে মাওয়া স্টোর এর সকল হিসাব সফলভাবে অ্যাপে পুনরুদ্ধার করা হয়েছে।")
+                                                .setPositiveButton("ঠিক আছে", null)
+                                                .show();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "শিটে কোনো ডাটা পাওয়া যায়নি!", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onFailure(String error) {
+                                runOnUiThread(() -> {
+                                    binding.progressCloudAction.setVisibility(View.GONE);
+                                    binding.btnSyncToSheetsNow.setEnabled(true);
+                                    binding.btnCloudRestore.setEnabled(true);
+                                    new MaterialAlertDialogBuilder(MainActivity.this)
+                                            .setTitle("❌ রিস্টোর ব্যর্থ")
+                                            .setMessage(error)
+                                            .setPositiveButton("ঠিক আছে", null)
+                                            .show();
+                                });
+                            }
+                        });
+                    })
+                    .setNegativeButton("বাতিল", null)
+                    .show();
+        });
+
+        this.binding.btnSheetsInstruction.setOnClickListener(v -> {
+            final String scriptCode = "function doPost(e) {\n  try {\n    var json = JSON.parse(e.postData.contents);\n    var ss = SpreadsheetApp.getActiveSpreadsheet();\n    var ledgerSheet = ss.getSheetByName(\"Daily Cash Book\");\n    if (!ledgerSheet) {\n      ledgerSheet = ss.insertSheet(\"Daily Cash Book\");\n    }\n    ledgerSheet.clear();\n    \n    var headers = [\"তারিখ (Date)\", \"সাবেক ক্যাশ (Opening Cash)\", \"মোট খরচ (Total Expenses)\", \"মোট বেচা (Total Sale)\", \"হাতে থাকা ক্যাশ (Cash in Hand)\", \"লাভ / ঘাটতি (Profit/Loss)\"];\n    ledgerSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight(\"bold\").setBackground(\"#D1FAE5\");\n    \n    var rows = [];\n    if (json.summaries && json.summaries.length > 0) {\n      for (var i = 0; i < json.summaries.length; i++) {\n        var s = json.summaries[i];\n        rows.push([\n          s.dateKey,\n          s.sabekCash,\n          s.expenses,\n          s.computedSale,\n          s.availableCash,\n          s.profitOrLoss\n        ]);\n      }\n    }\n    \n    if (rows.length > 0) {\n      ledgerSheet.getRange(2, 1, rows.length, headers.length).setValues(rows);\n    }\n    ledgerSheet.autoResizeColumns(1, headers.length);\n    return ContentService.createTextOutput(JSON.stringify({ \n      status: \"success\", \n      message: \"সফলভাবে \" + rows.length + \" দিনের ডাটা সিঙ্ক হয়েছে!\" \n    })).setMimeType(ContentService.MimeType.JSON);\n  } catch (error) {\n    return ContentService.createTextOutput(JSON.stringify({ \n      status: \"error\", \n      message: error.toString() \n    })).setMimeType(ContentService.MimeType.JSON);\n  }\n}";
+
+            ScrollView scrollView = new ScrollView(this);
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.VERTICAL);
+            container.setPadding(40, 30, 40, 30);
+
+            TextView txtTitle = new TextView(this);
+            txtTitle.setText("📊 মাওয়া স্টোর - গুগল শিট সেটআপ গাইড");
+            txtTitle.setTextSize(16.0f);
+            txtTitle.setTypeface(null, 1);
+            txtTitle.setTextColor(Color.parseColor("#047857"));
+            txtTitle.setPadding(0, 0, 0, 16);
+
+            TextView txtSteps = new TextView(this);
+            txtSteps.setText("১. একটি গুগল শিট (Google Sheet) তৈরি করুন অথবা বিদ্যমান শিট খুলুন।\n\n২. শিটের শেয়ারিং অপশনে গিয়ে 'Anyone with the link can view' (অথবা Viewer/Editor) এক্সেস দিন।\n\n৩. শিটের লিংক অথবা লিঙ্ক থেকে Spreadsheet ID এবং Sheet GID (যেমন: 0) কপি করে অ্যাপের বক্সে বসান।\n\n৪. (ঐচ্ছিক - ফুল অটো সিঙ্ক): শিটের Extensions -> Apps Script এ গিয়ে নিচের কোডটি পেস্ট করে Web app হিসেবে Deploy করুন (Access: Anyone)। সেই URL টি অ্যাপে বসিয়ে দিন।");
+            txtSteps.setTextSize(13.0f);
+            txtSteps.setTextColor(Color.parseColor("#334155"));
+            txtSteps.setLineSpacing(3.0f, 1.15f);
+            txtSteps.setPadding(0, 0, 0, 20);
+
+            Button btnCopy = new Button(this);
+            btnCopy.setText("📋 Apps Script কোড কপি করুন");
+            btnCopy.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#059669")));
+            btnCopy.setTextColor(Color.WHITE);
+            btnCopy.setOnClickListener(btn -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("Google Sheets Apps Script", scriptCode);
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(this, "✅ কোড ক্লিপবোর্ডে কপি করা হয়েছে!", Toast.LENGTH_SHORT).show();
+            });
+
+            container.addView(txtTitle);
+            container.addView(txtSteps);
+            container.addView(btnCopy);
+            scrollView.addView(container);
+
+            new MaterialAlertDialogBuilder(this)
+                    .setView(scrollView)
+                    .setPositiveButton("ঠিক আছে, বুঝলাম", null)
+                    .show();
+        });
+    }
+
+    private void setupLocalBackup() {
+        this.binding.btnLocalBackupSave.setOnClickListener(v -> {
+            try {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                intent.putExtra(Intent.EXTRA_TITLE, "mawa_store_backup.json");
+                startActivityForResult(intent, 2001);
+            } catch (Exception e) {
+                Toast.makeText(this, "ব্যাকআপ উইন্ডো খুলতে ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        this.binding.btnLocalBackupShare.setOnClickListener(v -> {
+            try {
+                Map<String, Object> data = StorageManager.getInstance(this).exportAllData();
+                String json = new Gson().toJson(data);
+                File cacheDir = getCacheDir();
+                File backupFile = new File(cacheDir, "mawa_store_backup.json");
+                FileWriter writer = new FileWriter(backupFile);
+                writer.write(json);
+                writer.flush();
+                writer.close();
+                Uri fileUri = FileProvider.getUriForFile(this, "com.aistudio.dailycashbook.kxmpzq.fileprovider", backupFile);
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("application/json");
+                shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(shareIntent, "মাওয়া স্টোর ব্যাকআপ ফাইল শেয়ার করুন"));
+            } catch (Exception e) {
+                Toast.makeText(this, "শেয়ার করতে ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        this.binding.btnLocalBackupRestore.setOnClickListener(v -> {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("হিসাব রিস্টোর করুন")
+                    .setMessage("পুনরুদ্ধার বা রিস্টোর করার সময় আপনার অ্যাপের বর্তমান সব ডাটা মুছে গিয়ে রিস্টোরকৃত ফাইলের ডাটা দিয়ে প্রতিস্থাপিত হবে। আপনি কি রিস্টোর করতে চান?")
+                    .setPositiveButton("হ্যাঁ, রিস্টোর করুন", (dialog, which) -> {
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                            intent.addCategory(Intent.CATEGORY_OPENABLE);
+                            intent.setType("application/json");
+                            startActivityForResult(intent, 2002);
+                        } catch (Exception e) {
+                            Toast.makeText(this, "ফাইল উইন্ডো খুলতে ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("বাতিল", null)
+                    .show();
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 2001 && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
+            try {
+                String json = new Gson().toJson(StorageManager.getInstance(this).exportAllData());
+                OutputStream outputStream = getContentResolver().openOutputStream(uri);
+                if (outputStream != null) {
+                    outputStream.write(json.getBytes(StandardCharsets.UTF_8));
+                    outputStream.flush();
+                    outputStream.close();
+                    Toast.makeText(this, "অভিনন্দন! মাওয়া স্টোরের লোকাল ব্যাকআপ ফাইলটি সংরক্ষিত হয়েছে।", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "ব্যাকআপ ফাইলে লিখতে অনুমতি দেয়া হয়নি।", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "ব্যাকআপ ফাইল সংরক্ষণ ব্যর্থ: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+        }
+        if (requestCode == 2002 && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri uri2 = data.getData();
+            try {
+                InputStream inputStream = getContentResolver().openInputStream(uri2);
+                if (inputStream != null) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    reader.close();
+                    inputStream.close();
+                    String json2 = sb.toString();
+                    Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> backupData = new Gson().fromJson(json2, mapType);
+                    if (backupData != null) {
+                        StorageManager.getInstance(this).importAllData(backupData);
+                        this.viewModel.loadSavedData();
+                        updateDashboardUI();
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("লোকাল রিস্টোর সফল")
+                                .setMessage("লোকাল ব্যাকআপ ফাইল থেকে মাওয়া স্টোর এর সকল হিসাব সুন্দরভাবে পুনরুদ্ধার সম্পন্ন হয়েছে!")
+                                .setPositiveButton("ঠিক আছে", null)
+                                .show();
+                        return;
+                    }
+                    Toast.makeText(this, "ব্যাকআপ ফাইলের ফরম্যাট সঠিক নয়!", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Exception e2) {
+                Toast.makeText(this, "লোকাল রিস্টোর ব্যর্থ: " + e2.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    public void planAutoCloudBackup() {
+        this.backupHandler.removeCallbacks(this.backupRunnable);
+        this.backupHandler.postDelayed(this.backupRunnable, 2000L);
+    }
+
+    public void triggerAutoCloudBackup() {
+        GoogleSheetsSyncManager sheetsSyncManager = GoogleSheetsSyncManager.getInstance(this);
+        if (sheetsSyncManager.isConnected()) {
+            sheetsSyncManager.syncData(this, new GoogleSheetsSyncManager.SyncCallback() {
+                @Override
+                public void onSuccess(String message) {
+                    runOnUiThread(() -> {
+                        if (binding != null && binding.tvLastSheetsSyncTime != null) {
+                            binding.tvLastSheetsSyncTime.setText("সর্বশেষ সিঙ্ক: " + new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(new Date()));
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(String error) {
+                }
+            });
+        }
+    }
