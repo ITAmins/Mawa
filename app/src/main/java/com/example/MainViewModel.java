@@ -4,7 +4,6 @@ import android.app.Application;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import com.example.MainViewModel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -26,8 +25,20 @@ public class MainViewModel extends AndroidViewModel {
     private final MutableLiveData<List<ExpenseModel>> expenses;
     private final MutableLiveData<Double> sabekCash;
     private final StorageManager storageManager;
+    private final AccountingService accountingService;
     private final MutableLiveData<Double> totalExpenses;
     private final MutableLiveData<Double> totalSale;
+
+    // Advanced Accounting LiveData
+    private final MutableLiveData<AccountingService.DailyAccountingSummary> dailySummary;
+    private final MutableLiveData<Double> cashSales;
+    private final MutableLiveData<Double> creditSales;
+    private final MutableLiveData<Double> bakiCollection;
+    private final MutableLiveData<Double> totalPurchases;
+    private final MutableLiveData<Double> totalOperatingExpenses;
+    private final MutableLiveData<Double> expectedClosingCash;
+    private final MutableLiveData<Double> estimatedGrossProfit;
+    private final MutableLiveData<Double> estimatedNetProfit;
 
     /* loaded from: classes5.dex */
     public static class DaySummary {
@@ -37,6 +48,11 @@ public class MainViewModel extends AndroidViewModel {
         public double expenses;
         public double margin;
         public double sabek;
+        public double purchases;
+        public double operatingExpenses;
+        public double creditSales;
+        public double bakiCollection;
+        public double estimatedProfit;
     }
 
     public MainViewModel(Application application) {
@@ -49,10 +65,22 @@ public class MainViewModel extends AndroidViewModel {
         this.totalExpenses = new MutableLiveData<>(valueOf);
         this.totalSale = new MutableLiveData<>(valueOf);
         this.calculationResult = new MutableLiveData<>(valueOf);
+
+        this.dailySummary = new MutableLiveData<>(null);
+        this.cashSales = new MutableLiveData<>(valueOf);
+        this.creditSales = new MutableLiveData<>(valueOf);
+        this.bakiCollection = new MutableLiveData<>(valueOf);
+        this.totalPurchases = new MutableLiveData<>(valueOf);
+        this.totalOperatingExpenses = new MutableLiveData<>(valueOf);
+        this.expectedClosingCash = new MutableLiveData<>(valueOf);
+        this.estimatedGrossProfit = new MutableLiveData<>(valueOf);
+        this.estimatedNetProfit = new MutableLiveData<>(valueOf);
+
         this.activeCalendar = Calendar.getInstance();
         this.activeDateString = new MutableLiveData<>("");
         this.activeDayOfWeek = new MutableLiveData<>("");
         this.storageManager = StorageManager.getInstance(application);
+        this.accountingService = AccountingService.getInstance(application);
         updateActiveDateState();
     }
 
@@ -62,6 +90,46 @@ public class MainViewModel extends AndroidViewModel {
 
     public LiveData<String> getActiveDayOfWeek() {
         return this.activeDayOfWeek;
+    }
+
+    public LiveData<AccountingService.DailyAccountingSummary> getDailySummary() {
+        return this.dailySummary;
+    }
+
+    public LiveData<Double> getCashSales() {
+        return this.cashSales;
+    }
+
+    public LiveData<Double> getCreditSales() {
+        return this.creditSales;
+    }
+
+    public LiveData<Double> getBakiCollection() {
+        return this.bakiCollection;
+    }
+
+    public LiveData<Double> getTotalPurchases() {
+        return this.totalPurchases;
+    }
+
+    public LiveData<Double> getTotalOperatingExpenses() {
+        return this.totalOperatingExpenses;
+    }
+
+    public LiveData<Double> getExpectedClosingCash() {
+        return this.expectedClosingCash;
+    }
+
+    public LiveData<Double> getEstimatedGrossProfit() {
+        return this.estimatedGrossProfit;
+    }
+
+    public LiveData<Double> getEstimatedNetProfit() {
+        return this.estimatedNetProfit;
+    }
+
+    public AccountingService getAccountingService() {
+        return this.accountingService;
     }
 
     public void moveToPreviousDay() {
@@ -269,21 +337,24 @@ public class MainViewModel extends AndroidViewModel {
     }
 
     private void calculateTotals() {
-        double totalExp = 0.0d;
-        List<ExpenseModel> currentExpenses = this.expenses.getValue();
-        if (currentExpenses != null) {
-            for (ExpenseModel exp : currentExpenses) {
-                totalExp += exp.getAmount();
-            }
-        }
-        this.totalExpenses.setValue(Double.valueOf(totalExp));
-        double sabek = this.sabekCash.getValue() != null ? this.sabekCash.getValue().doubleValue() : 0.0d;
-        double cash = this.availableCash.getValue() != null ? this.availableCash.getValue().doubleValue() : 0.0d;
-        double computedSale = (cash + totalExp) - sabek;
-        this.dailySale.setValue(Double.valueOf(computedSale));
-        this.totalSale.setValue(Double.valueOf(computedSale));
-        double result = computedSale - totalExp;
-        this.calculationResult.setValue(Double.valueOf(result));
+        String dateKey = getActiveDateKey();
+        AccountingService.DailyAccountingSummary summary = this.accountingService.calculateDailySummary(dateKey);
+        this.dailySummary.setValue(summary);
+
+        this.totalExpenses.setValue(Double.valueOf(summary.totalCashOutflow));
+        this.cashSales.setValue(Double.valueOf(summary.cashSales));
+        this.creditSales.setValue(Double.valueOf(summary.creditSales));
+        this.totalSale.setValue(Double.valueOf(summary.totalSales));
+        this.dailySale.setValue(Double.valueOf(summary.totalSales));
+        this.bakiCollection.setValue(Double.valueOf(summary.bakiCollection));
+        this.totalPurchases.setValue(Double.valueOf(summary.totalPurchases));
+        this.totalOperatingExpenses.setValue(Double.valueOf(summary.totalOperatingExpenses));
+        this.expectedClosingCash.setValue(Double.valueOf(summary.expectedClosingCash));
+        this.estimatedGrossProfit.setValue(Double.valueOf(summary.estimatedGrossProfit));
+        this.estimatedNetProfit.setValue(Double.valueOf(summary.estimatedNetProfit));
+
+        // Keep calculationResult populated for backward compatibility with existing result views
+        this.calculationResult.setValue(Double.valueOf(summary.estimatedNetProfit));
     }
 
     public String getBengaliDayOfWeek() {
@@ -298,86 +369,95 @@ public class MainViewModel extends AndroidViewModel {
     public String generateRuledNotebookReport() {
         String day = getBengaliDayOfWeek();
         String date = getCurrentFormattedDate();
+        AccountingService.DailyAccountingSummary summary = this.accountingService.calculateDailySummary(date);
+
         StringBuilder report = new StringBuilder();
         report.append("তারিখ: ").append(date).append(" (").append(day).append(")\n");
+        report.append("=============================\n");
+        report.append("💵 ক্যাশ ও বিক্রি হিসাব\n");
         report.append("-----------------------------\n");
-        report.append("খরচের বিবরণ:\n");
+        report.append("সাবেক ক্যাশ ......... ৳ ").append(PdfExporter.formatBengaliNumber(summary.openingCash)).append("\n");
+        report.append("নগদ বিক্রি ........... ৳ ").append(PdfExporter.formatBengaliNumber(summary.cashSales)).append("\n");
+        report.append("বাকি আদায় (জমা) ..... ৳ ").append(PdfExporter.formatBengaliNumber(summary.bakiCollection)).append("\n");
+        report.append("বাকি বিক্রি (বকেয়া) ... ৳ ").append(PdfExporter.formatBengaliNumber(summary.creditSales)).append("\n");
+        report.append("-----------------------------\n");
+        report.append("মোট বিক্রি: ৳ ").append(PdfExporter.formatBengaliNumber(summary.totalSales)).append("\n\n");
+
+        report.append("🛍️ খরচ ও মাল কেনা বিবরণ:\n");
+        report.append("-----------------------------\n");
         List<ExpenseModel> currentExpenses = this.expenses.getValue();
         if (currentExpenses == null || currentExpenses.isEmpty()) {
-            report.append("(কোনো খরচ যোগ করা হয়নি)\n");
+            report.append("(কোনো খরচ/মাল কেনা যোগ করা হয়নি)\n");
         } else {
             for (ExpenseModel exp : currentExpenses) {
-                report.append(exp.getName()).append(" ............ ৳ ").append(PdfExporter.formatBengaliNumber(exp.getAmount())).append("\n");
+                String prefix = exp.isPurchase() ? "📦 " : "🏢 ";
+                report.append(prefix).append(exp.getName()).append(" ........ ৳ ").append(PdfExporter.formatBengaliNumber(exp.getAmount())).append("\n");
             }
         }
-        double totalExp = this.totalExpenses.getValue() != null ? this.totalExpenses.getValue().doubleValue() : 0.0d;
         report.append("-----------------------------\n");
-        report.append("মোট খরচ: ৳ ").append(PdfExporter.formatBengaliNumber(totalExp)).append("\n\n");
-        double sale = this.dailySale.getValue() != null ? this.dailySale.getValue().doubleValue() : 0.0d;
-        double sabek = this.sabekCash.getValue() != null ? this.sabekCash.getValue().doubleValue() : 0.0d;
-        double totalSl = this.totalSale.getValue() != null ? this.totalSale.getValue().doubleValue() : 0.0d;
-        report.append("আজকের বেচা ......... ৳ ").append(PdfExporter.formatBengaliNumber(sale)).append("\n");
-        report.append("সাবেক (আছে) ......... ৳ ").append(PdfExporter.formatBengaliNumber(sabek)).append("\n");
+        report.append("পণ্য ক্রয় (স্টক): ৳ ").append(PdfExporter.formatBengaliNumber(summary.totalPurchases)).append("\n");
+        report.append("দোকান খরচ: ৳ ").append(PdfExporter.formatBengaliNumber(summary.totalOperatingExpenses + summary.totalLegacyExpenses)).append("\n");
+        report.append("মোট ক্যাশ ব্যয়: ৳ ").append(PdfExporter.formatBengaliNumber(summary.totalCashOutflow)).append("\n\n");
+
+        report.append("=============================\n");
+        report.append("📈 মুনাফা বিশ্লেষণ (আনুমানিক)\n");
         report.append("-----------------------------\n");
-        report.append("মোট বেচা: ৳ ").append(PdfExporter.formatBengaliNumber(totalSl)).append("\n");
+        report.append("আনুমানিক মোট লাভ (").append(PdfExporter.formatBengaliNumber((int) Math.round(summary.estimatedGrossMarginRate * 100))).append("%): ৳ ").append(PdfExporter.formatBengaliNumber(summary.estimatedGrossProfit)).append("\n");
+        report.append("দোকান পরিচালনা খরচ: -৳ ").append(PdfExporter.formatBengaliNumber(summary.totalOperatingExpenses)).append("\n");
         report.append("-----------------------------\n");
-        double result = this.calculationResult.getValue() != null ? this.calculationResult.getValue().doubleValue() : 0.0d;
-        if (result > 0.0d) {
-            report.append("🟢 লাভ হয়েছে: ৳ ").append(PdfExporter.formatBengaliNumber(result)).append("\n");
-        } else if (result != 0.0d) {
-            report.append("🔴 ঘাটতি হয়েছে: ৳ ").append(PdfExporter.formatBengaliNumber(Math.abs(result))).append("\n");
+        if (summary.estimatedNetProfit > 0.0d) {
+            report.append("🟢 আনুমানিক নিট লাভ: ৳ ").append(PdfExporter.formatBengaliNumber(summary.estimatedNetProfit)).append("\n");
+        } else if (summary.estimatedNetProfit < 0.0d) {
+            report.append("🔴 আনুমানিক ঘাটতি: ৳ ").append(PdfExporter.formatBengaliNumber(Math.abs(summary.estimatedNetProfit))).append("\n");
         } else {
             report.append("✅ হিসাব সমান সমান\n");
+        }
+        report.append("-----------------------------\n");
+        report.append("💵 প্রত্যাশিত সমাপনী ক্যাশ: ৳ ").append(PdfExporter.formatBengaliNumber(summary.expectedClosingCash)).append("\n");
+        report.append("গোনা সমাপনী ক্যাশ: ৳ ").append(PdfExporter.formatBengaliNumber(summary.actualAvailableCash)).append("\n");
+        if (summary.cashDiscrepancy != 0.0) {
+            if (summary.cashDiscrepancy > 0) {
+                report.append("⚠️ ক্যাশ বাড়তি: +৳ ").append(PdfExporter.formatBengaliNumber(summary.cashDiscrepancy)).append("\n");
+            } else {
+                report.append("⚠️ ক্যাশ কম/শর্ট: -৳ ").append(PdfExporter.formatBengaliNumber(Math.abs(summary.cashDiscrepancy))).append("\n");
+            }
         }
         return report.toString();
     }
 
     public List<DaySummary> getHistoricalSummaries() {
-        MainViewModel mainViewModel = this;
-        List<String> dates = mainViewModel.storageManager.getActiveDates();
+        List<String> dates = this.storageManager.getActiveDates();
         List<DaySummary> summaries = new ArrayList<>();
         for (String d : dates) {
-            double expTotal = 0.0d;
-            List<ExpenseModel> list = mainViewModel.storageManager.loadExpenses(d);
-            for (ExpenseModel e : list) {
-                expTotal += e.getAmount();
-            }
-            double sabek = mainViewModel.storageManager.loadSabekCash(d);
-            double cash = mainViewModel.storageManager.loadAvailableCash(d);
-            double sale = (cash + expTotal) - sabek;
-            double margin = sale - expTotal;
-            if (expTotal > 0.0d || sabek > 0.0d || cash > 0.0d) {
+            AccountingService.DailyAccountingSummary s = this.accountingService.calculateDailySummary(d);
+            if (s.totalCashOutflow > 0.0d || s.openingCash > 0.0d || s.actualAvailableCash > 0.0d || s.totalSales > 0.0d) {
                 DaySummary sum = new DaySummary();
                 sum.dateKey = d;
-                sum.expenses = expTotal;
-                sum.sabek = sabek;
-                sum.availableCash = cash;
-                sum.computedSale = sale;
-                sum.margin = margin;
+                sum.expenses = s.totalCashOutflow;
+                sum.sabek = s.openingCash;
+                sum.availableCash = s.actualAvailableCash;
+                sum.computedSale = s.totalSales;
+                sum.margin = s.estimatedNetProfit;
+                sum.purchases = s.totalPurchases;
+                sum.operatingExpenses = s.totalOperatingExpenses;
+                sum.creditSales = s.creditSales;
+                sum.bakiCollection = s.bakiCollection;
+                sum.estimatedProfit = s.estimatedNetProfit;
                 summaries.add(sum);
             }
-            mainViewModel = this;
         }
-        summaries.sort(new Comparator() { // from class: com.example.MainViewModel$$ExternalSyntheticLambda0
-            @Override // java.util.Comparator
-            public final int compare(Object obj, Object obj2) {
-                return MainViewModel.lambda$getHistoricalSummaries$0((MainViewModel.DaySummary) obj, (MainViewModel.DaySummary) obj2);
+        summaries.sort((o1, o2) -> {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy", Locale.US);
+                Date d1 = sdf.parse(o1.dateKey);
+                Date d2 = sdf.parse(o2.dateKey);
+                if (d1 != null && d2 != null) {
+                    return d2.compareTo(d1);
+                }
+            } catch (Exception ignored) {
             }
+            return o2.dateKey.compareTo(o1.dateKey);
         });
         return summaries;
-    }
-
-    /* JADX INFO: Access modifiers changed from: package-private */
-    public static /* synthetic */ int lambda$getHistoricalSummaries$0(DaySummary o1, DaySummary o2) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy", Locale.US);
-            Date d1 = sdf.parse(o1.dateKey);
-            Date d2 = sdf.parse(o2.dateKey);
-            if (d1 != null && d2 != null) {
-                return d2.compareTo(d1);
-            }
-        } catch (Exception e) {
-        }
-        return o2.dateKey.compareTo(o1.dateKey);
     }
 }

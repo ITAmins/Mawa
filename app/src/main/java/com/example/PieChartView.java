@@ -88,23 +88,23 @@ public class PieChartView extends View {
     }
 
     private void init() {
-        this.categoryColors.put("🛍️ বাজার", Integer.valueOf(Color.parseColor("#FF007F")));
-        this.categoryColors.put("🏠 ভাড়া", Integer.valueOf(Color.parseColor("#00F0FF")));
-        this.categoryColors.put("🚌 পরিবহন", Integer.valueOf(Color.parseColor("#BD00FF")));
-        this.categoryColors.put("💊 ওষুধ", Integer.valueOf(Color.parseColor("#FF5F00")));
-        this.categoryColors.put("🏦 ব্যাংক", Integer.valueOf(Color.parseColor("#00FF66")));
-        this.categoryColors.put("🌾 কাঁচামাল", Integer.valueOf(Color.parseColor("#FFF000")));
-        this.categoryColors.put("⚙️ অন্যান্য", Integer.valueOf(Color.parseColor("#8F9CAE")));
-        this.paintCenter.setColor(Color.parseColor("#0B0E14"));
+        this.categoryColors.put("🛍️ বাজার", Integer.valueOf(Color.parseColor("#2563EB")));
+        this.categoryColors.put("🏠 ভাড়া", Integer.valueOf(Color.parseColor("#0D9488")));
+        this.categoryColors.put("🚌 পরিবহন", Integer.valueOf(Color.parseColor("#7C3AED")));
+        this.categoryColors.put("💊 ওষুধ", Integer.valueOf(Color.parseColor("#EA580C")));
+        this.categoryColors.put("🏦 ব্যাংক", Integer.valueOf(Color.parseColor("#059669")));
+        this.categoryColors.put("🌾 কাঁচামাল", Integer.valueOf(Color.parseColor("#D97706")));
+        this.categoryColors.put("⚙️ অন্যান্য", Integer.valueOf(Color.parseColor("#64748B")));
+        this.paintCenter.setColor(Color.parseColor("#FFFFFF"));
         this.paintText.setFakeBoldText(true);
         this.paintText.setTextAlign(Paint.Align.CENTER);
-        this.paintBg.setColor(Color.parseColor("#0B0E14"));
+        this.paintBg.setColor(Color.parseColor("#FFFFFF"));
         this.paintBg.setStyle(Paint.Style.FILL);
-        this.paintBorder.setColor(Color.parseColor("#1E293B"));
-        this.paintBorder.setStrokeWidth(3.0f);
+        this.paintBorder.setColor(Color.parseColor("#E2E8F0"));
+        this.paintBorder.setStrokeWidth(2.0f);
         this.paintBorder.setStyle(Paint.Style.STROKE);
         this.paintGlow.setStyle(Paint.Style.STROKE);
-        this.paintGlow.setStrokeWidth(8.0f);
+        this.paintGlow.setStrokeWidth(6.0f);
     }
 
     public void setExpenses(List<ExpenseModel> expenses) {
@@ -244,7 +244,7 @@ public class PieChartView extends View {
         }
         RectF outerBg = new RectF(4.0f, 4.0f, width - 4, height - 4);
         canvas2.drawRoundRect(outerBg, dpToPx(16), dpToPx(16), this.paintBg);
-        this.paintBorder.setColor(Color.parseColor("#1E293B"));
+        this.paintBorder.setColor(Color.parseColor("#E2E8F0"));
         canvas2.drawRoundRect(outerBg, dpToPx(16), dpToPx(16), this.paintBorder);
         int size = Math.min(width, height);
         int radius = (size / 2) - 40;
@@ -253,13 +253,13 @@ public class PieChartView extends View {
         boolean isEmpty = this.slices.isEmpty();
         Paint paint = this.paintArc;
         if (isEmpty) {
-            paint.setColor(Color.parseColor("#151B26"));
+            paint.setColor(Color.parseColor("#F8FAFC"));
             this.paintArc.setStyle(Paint.Style.FILL);
             canvas2.drawCircle(width / 2.0f, height / 2.0f, radius, this.paintArc);
-            this.paintBorder.setColor(Color.parseColor("#334155"));
+            this.paintBorder.setColor(Color.parseColor("#E2E8F0"));
             canvas2.drawCircle(width / 2.0f, height / 2.0f, radius, this.paintBorder);
             this.paintText.setTextSize(radius * 0.13f);
-            this.paintText.setColor(Color.parseColor("#64748B"));
+            this.paintText.setColor(Color.parseColor("#94A3B8"));
             canvas2.drawText("কোনো রেকর্ড নেই", width / 2.0f, (height / 2.0f) + 6.0f, this.paintText);
             return;
         }
@@ -297,22 +297,22 @@ public class PieChartView extends View {
             f2 = f;
         }
         float f3 = f2;
-        this.paintCenter.setColor(Color.parseColor("#0B0E14"));
+        this.paintCenter.setColor(Color.parseColor("#FFFFFF"));
         canvas2.drawCircle(width / f3, height / f3, radius * 0.58f, this.paintCenter);
-        this.paintBorder.setColor(Color.parseColor("#1E293B"));
+        this.paintBorder.setColor(Color.parseColor("#E2E8F0"));
         canvas2.drawCircle(width / f3, height / f3, radius * 0.58f, this.paintBorder);
         float f4 = 0.14f;
         float f5 = 0.11f;
         if (this.selectedSliceIndex >= 0 && this.selectedSliceIndex < this.slices.size()) {
             PieSlice sel = this.slices.get(this.selectedSliceIndex);
             this.paintText.setTextSize(radius * 0.11f);
-            this.paintText.setColor(Color.parseColor("#00F0FF"));
+            this.paintText.setColor(Color.parseColor("#2563EB"));
             canvas2.drawText(sel.name, width / f3, (height / f3) - (radius * 0.14f), this.paintText);
             this.paintText.setTextSize(radius * 0.2f);
-            this.paintText.setColor(Color.parseColor("#FF007F"));
+            this.paintText.setColor(Color.parseColor("#0F172A"));
             canvas2.drawText("৳" + formatCompact(sel.value), width / f3, (height / f3) + (radius * 0.08f), this.paintText);
             this.paintText.setTextSize(radius * 0.08f);
-            this.paintText.setColor(Color.parseColor("#8F9CAE"));
+            this.paintText.setColor(Color.parseColor("#64748B"));
             double total = 0.0d;
             for (PieSlice s : this.slices) {
                 total += s.value;
@@ -328,13 +328,13 @@ public class PieChartView extends View {
             f4 = f4;
         }
         this.paintText.setTextSize(radius * f5);
-        this.paintText.setColor(Color.parseColor("#8F9CAE"));
+        this.paintText.setColor(Color.parseColor("#64748B"));
         canvas2.drawText("মোট খরচ", width / f3, (height / f3) - (radius * 0.1f), this.paintText);
         this.paintText.setTextSize(radius * 0.18f);
-        this.paintText.setColor(Color.parseColor("#00FF66"));
+        this.paintText.setColor(Color.parseColor("#0F172A"));
         canvas2.drawText("৳" + formatCompact(totalExpense), width / f3, (height / f3) + (radius * f4), this.paintText);
         this.paintText.setTextSize(radius * 0.075f);
-        this.paintText.setColor(Color.parseColor("#8F9CAE"));
+        this.paintText.setColor(Color.parseColor("#94A3B8"));
         canvas2.drawText("খাতে চাপ দিয়ে দেখুন", width / f3, (height / f3) + (radius * 0.32f), this.paintText);
     }
 

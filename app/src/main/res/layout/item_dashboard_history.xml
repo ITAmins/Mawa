@@ -1,22 +1,138 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView android:id="@id/cardHistoryRow" android:focusable="true" android:clickable="true" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="8.0dip" app:cardBackgroundColor="#ffffffff" app:cardCornerRadius="16.0dip" app:cardElevation="1.0dip" app:strokeColor="#ffeef2f6" app:strokeWidth="1.1999817dip"
-  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
-    <LinearLayout android:orientation="vertical" android:padding="12.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content">
-        <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="8.0dip">
-            <ImageView android:layout_width="16.0dip" android:layout_height="16.0dip" android:src="@drawable/ic_calendar" android:layout_marginEnd="6.0dip" app:tint="#ff2563eb" />
-            <TextView android:textSize="14.0sp" android:textStyle="bold" android:textColor="#ff0f172a" android:id="@id/tvHistoryDate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="৩১-০৫-২০২৬" />
-            <TextView android:textSize="12.0sp" android:textColor="#ff64748b" android:id="@id/tvHistoryDay" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text=" (রবিবার)" android:layout_weight="1.0" android:layout_marginStart="4.0dip" />
-            <TextView android:textSize="11.0sp" android:textStyle="bold" android:textColor="#ff16a34a" android:id="@id/tvHistoryStatusPill" android:background="#ffdcfce7" android:paddingLeft="8.0dip" android:paddingTop="3.0dip" android:paddingRight="8.0dip" android:paddingBottom="3.0dip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="\ufffd\ufffd লাভ ৳ ৫০০" android:paddingHorizontal="8.0dip" android:paddingVertical="3.0dip" />
-        </LinearLayout>
-        <View android:background="#fff1f5f9" android:layout_width="fill_parent" android:layout_height="1.0dip" android:layout_marginBottom="8.0dip" />
-        <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:weightSum="2.0">
-            <LinearLayout android:orientation="vertical" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
-                <TextView android:textSize="11.0sp" android:textColor="#ff64748b" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মোট বেচা" />
-                <TextView android:textSize="14.0sp" android:textStyle="bold" android:textColor="#ff1e3a8a" android:id="@id/tvHistorySales" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="৳ ৫,২৫০" />
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardHistoryRow"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="3dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?selectableItemBackground"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#F1F5F9"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="6dp"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="#2563EB" />
+
+                <TextView
+                    android:id="@+id/tvHistoryDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="৩১-০৫-২০২৬"
+                    android:textColor="#0F172A"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvHistoryDay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text=" (রবিবার)"
+                    android:textColor="#64748B"
+                    android:textSize="12sp" />
             </LinearLayout>
-            <LinearLayout android:orientation="vertical" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
-                <TextView android:textSize="11.0sp" android:textColor="#ff64748b" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="মোট খরচ" />
-                <TextView android:textSize="14.0sp" android:textStyle="bold" android:textColor="#ffdc2626" android:id="@id/tvHistoryExpenses" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="৳ ৪,৭৫০" />
+
+            <TextView
+                android:id="@+id/tvHistoryStatusPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/shape_capsule_white"
+                android:backgroundTint="#DCFCE7"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:text="লাভ ৳ ৫০০"
+                android:textColor="#16A34A"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="8dp"
+            android:background="#F8FAFC" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2.0">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.0"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="মোট বেচা"
+                    android:textColor="#64748B"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvHistorySales"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="৳ ৫,২৫০"
+                    android:textColor="#0F172A"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.0"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="মোট খরচ"
+                    android:textColor="#64748B"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvHistoryExpenses"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="৳ ৪,৭৫০"
+                    android:textColor="#DC2626"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

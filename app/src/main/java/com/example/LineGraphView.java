@@ -84,24 +84,24 @@ public class LineGraphView extends View {
     }
 
     private void init() {
-        this.paintGrid.setColor(Color.parseColor("#152438"));
-        this.paintGrid.setStrokeWidth(2.0f);
+        this.paintGrid.setColor(Color.parseColor("#E2E8F0"));
+        this.paintGrid.setStrokeWidth(1.5f);
         this.paintGrid.setStyle(Paint.Style.STROKE);
-        this.paintGrid.setPathEffect(new DashPathEffect(new float[]{10.0f, 10.0f}, 0.0f));
-        this.paintSalesLine.setColor(Color.parseColor("#00F0FF"));
-        this.paintSalesLine.setStrokeWidth(6.0f);
+        this.paintGrid.setPathEffect(new DashPathEffect(new float[]{8.0f, 8.0f}, 0.0f));
+        this.paintSalesLine.setColor(Color.parseColor("#2563EB"));
+        this.paintSalesLine.setStrokeWidth(5.0f);
         this.paintSalesLine.setStyle(Paint.Style.STROKE);
         this.paintSalesLine.setStrokeCap(Paint.Cap.ROUND);
-        this.paintExpensesLine.setColor(Color.parseColor("#FF007F"));
-        this.paintExpensesLine.setStrokeWidth(6.0f);
+        this.paintExpensesLine.setColor(Color.parseColor("#EF4444"));
+        this.paintExpensesLine.setStrokeWidth(5.0f);
         this.paintExpensesLine.setStyle(Paint.Style.STROKE);
         this.paintExpensesLine.setStrokeCap(Paint.Cap.ROUND);
         this.paintText.setFakeBoldText(true);
         this.paintLabelPoint.setStyle(Paint.Style.FILL);
-        this.paintBg.setColor(Color.parseColor("#0B0E14"));
+        this.paintBg.setColor(Color.parseColor("#FFFFFF"));
         this.paintBg.setStyle(Paint.Style.FILL);
-        this.paintBorder.setColor(Color.parseColor("#1E293B"));
-        this.paintBorder.setStrokeWidth(3.0f);
+        this.paintBorder.setColor(Color.parseColor("#E2E8F0"));
+        this.paintBorder.setStrokeWidth(2.0f);
         this.paintBorder.setStyle(Paint.Style.STROKE);
         this.paintHud.setStyle(Paint.Style.FILL);
     }
@@ -165,7 +165,7 @@ public class LineGraphView extends View {
         if (width != 0 && height2 != 0) {
             RectF roundRect = new RectF(4.0f, 4.0f, width - 4, height2 - 4);
             canvas.drawRoundRect(roundRect, dpToPx(16.0f), dpToPx(16.0f), this.paintBg);
-            this.paintBorder.setColor(Color.parseColor("#1E293B"));
+            this.paintBorder.setColor(Color.parseColor("#E2E8F0"));
             canvas.drawRoundRect(roundRect, dpToPx(16.0f), dpToPx(16.0f), this.paintBorder);
             int paddingLeft = dpToPx(40.0f);
             int paddingRight = dpToPx(16.0f);
@@ -195,7 +195,7 @@ public class LineGraphView extends View {
                     canvas.drawLine(paddingLeft, paddingTop + chartHeight2, paddingLeft + chartWidth, paddingTop + chartHeight2, this.paintGrid);
                     this.paintText.setTextAlign(Paint.Align.LEFT);
                     this.paintText.setTextSize(dpToPx(9.0f));
-                    this.paintText.setColor(Color.parseColor("#475569"));
+                    this.paintText.setColor(Color.parseColor("#94A3B8"));
                     canvas.drawText("৳" + formatCompact(maxVal2), paddingLeft + dpToPx(4.0f), paddingTop - dpToPx(4.0f), this.paintText);
                     canvas.drawText("৳" + formatCompact(maxVal2 / 2.0d), dpToPx(4.0f) + paddingLeft, (paddingTop + (chartHeight2 / 2.0f)) - dpToPx(4.0f), this.paintText);
                     canvas.drawText("৳0", dpToPx(4.0f) + paddingLeft, (paddingTop + chartHeight2) - dpToPx(4.0f), this.paintText);
@@ -245,9 +245,9 @@ public class LineGraphView extends View {
                     float[] ySales3 = ySales;
                     float[] yExp3 = yExp;
                     this.cachedXCoords = xCoords;
-                    this.paintSalesFill.setShader(new LinearGradient(0.0f, paddingTop, 0.0f, paddingTop + chartHeight2, Color.parseColor("#2500F0FF"), Color.parseColor("#0000F0FF"), Shader.TileMode.CLAMP));
+                    this.paintSalesFill.setShader(new LinearGradient(0.0f, paddingTop, 0.0f, paddingTop + chartHeight2, Color.parseColor("#302563EB"), Color.parseColor("#002563EB"), Shader.TileMode.CLAMP));
                     canvas.drawPath(salesFillPath2, this.paintSalesFill);
-                    this.paintExpensesFill.setShader(new LinearGradient(0.0f, paddingTop, 0.0f, paddingTop + chartHeight2, Color.parseColor("#25FF007F"), Color.parseColor("#00FF007F"), Shader.TileMode.CLAMP));
+                    this.paintExpensesFill.setShader(new LinearGradient(0.0f, paddingTop, 0.0f, paddingTop + chartHeight2, Color.parseColor("#20EF4444"), Color.parseColor("#00EF4444"), Shader.TileMode.CLAMP));
                     canvas.drawPath(expensesFillPath, this.paintExpensesFill);
                     canvas.drawPath(salesPath, this.paintSalesLine);
                     canvas.drawPath(expensesPath, this.paintExpensesLine);
@@ -259,19 +259,19 @@ public class LineGraphView extends View {
                             salesFillPath = salesFillPath2;
                             i = i3;
                         } else {
-                            this.paintLabelPoint.setColor(Color.parseColor("#4000F0FF"));
+                            this.paintLabelPoint.setColor(Color.parseColor("#402563EB"));
                             float f = xCoords[i3];
                             float f2 = ySales3[i3];
                             salesFillPath = salesFillPath2;
                             i = i3;
                             int i4 = dpToPx(8.0f);
                             canvas.drawCircle(f, f2, i4, this.paintLabelPoint);
-                            this.paintLabelPoint.setColor(Color.parseColor("#40FF007F"));
+                            this.paintLabelPoint.setColor(Color.parseColor("#40EF4444"));
                             canvas.drawCircle(xCoords[i], yExp3[i], dpToPx(8.0f), this.paintLabelPoint);
                         }
-                        this.paintLabelPoint.setColor(Color.parseColor("#00F0FF"));
+                        this.paintLabelPoint.setColor(Color.parseColor("#2563EB"));
                         canvas.drawCircle(xCoords[i], ySales3[i], dpToPx(4.0f), this.paintLabelPoint);
-                        this.paintLabelPoint.setColor(Color.parseColor("#FF007F"));
+                        this.paintLabelPoint.setColor(Color.parseColor("#EF4444"));
                         canvas.drawCircle(xCoords[i], yExp3[i], dpToPx(4.0f), this.paintLabelPoint);
                         this.paintText.setTextAlign(Paint.Align.CENTER);
                         this.paintText.setTextSize(dpToPx(9.0f));
@@ -288,8 +288,8 @@ public class LineGraphView extends View {
                     if (this.selectedIndex >= 0 && this.selectedIndex < pointsCount) {
                         MainViewModel.DaySummary sel = this.historyData.get(this.selectedIndex);
                         float selX = xCoords[this.selectedIndex];
-                        this.paintGrid.setColor(Color.parseColor("#4000F0FF"));
-                        this.paintGrid.setStrokeWidth(3.0f);
+                        this.paintGrid.setColor(Color.parseColor("#402563EB"));
+                        this.paintGrid.setStrokeWidth(2.0f);
                         canvas.drawLine(selX, paddingTop, selX, paddingTop + chartHeight2, this.paintGrid);
                         float hudWidth = dpToPx(130.0f);
                         float hudHeight = dpToPx(60.0f);
@@ -306,29 +306,29 @@ public class LineGraphView extends View {
                         }
                         float hudHeight2 = hudLeft + hudWidth;
                         RectF hudRect = new RectF(hudLeft, hudTop, hudHeight2, hudTop + hudHeight);
-                        this.paintHud.setColor(Color.parseColor("#E00C1017"));
+                        this.paintHud.setColor(Color.parseColor("#FFFFFF"));
                         float hudTop2 = hudTop;
                         canvas.drawRoundRect(hudRect, dpToPx(10.0f), dpToPx(10.0f), this.paintHud);
-                        this.paintBorder.setColor(Color.parseColor("#00F0FF"));
-                        this.paintBorder.setStrokeWidth(2.0f);
+                        this.paintBorder.setColor(Color.parseColor("#2563EB"));
+                        this.paintBorder.setStrokeWidth(1.5f);
                         canvas.drawRoundRect(hudRect, dpToPx(10.0f), dpToPx(10.0f), this.paintBorder);
                         float textStartX = dpToPx(8.0f) + hudLeft;
                         this.paintText.setTextAlign(Paint.Align.LEFT);
                         this.paintText.setTextSize(dpToPx(8.5f));
-                        this.paintText.setColor(Color.parseColor("#8F9CAE"));
+                        this.paintText.setColor(Color.parseColor("#64748B"));
                         canvas.drawText("তারিখ: " + sel.dateKey, textStartX, hudTop2 + dpToPx(14.0f), this.paintText);
-                        this.paintText.setColor(Color.parseColor("#00F0FF"));
+                        this.paintText.setColor(Color.parseColor("#2563EB"));
                         canvas.drawText("● বেচা: ৳" + formatCompact(sel.computedSale), textStartX, hudTop2 + dpToPx(28.0f), this.paintText);
-                        this.paintText.setColor(Color.parseColor("#FF007F"));
+                        this.paintText.setColor(Color.parseColor("#EF4444"));
                         canvas.drawText("● খরচ: ৳" + formatCompact(sel.expenses), textStartX, hudTop2 + dpToPx(42.0f), this.paintText);
                         double netProfit = sel.computedSale - sel.expenses;
-                        this.paintText.setColor(Color.parseColor(netProfit >= 0.0d ? "#00FF66" : "#EF4444"));
+                        this.paintText.setColor(Color.parseColor(netProfit >= 0.0d ? "#059669" : "#EF4444"));
                         canvas.drawText("● লাভ: ৳" + formatCompact(netProfit), textStartX, hudTop2 + dpToPx(54.0f), this.paintText);
                         return;
                     }
                     this.paintText.setTextAlign(Paint.Align.CENTER);
                     this.paintText.setTextSize(dpToPx(9.0f));
-                    this.paintText.setColor(Color.parseColor("#475569"));
+                    this.paintText.setColor(Color.parseColor("#94A3B8"));
                     canvas.drawText("পয়েন্টে আঙুল ছুঁয়ে স্পর্শ করুন", width3 / 2.0f, paddingTop - dpToPx(6.0f), this.paintText);
                     return;
                 }
@@ -337,7 +337,7 @@ public class LineGraphView extends View {
             }
             this.paintText.setTextAlign(Paint.Align.CENTER);
             this.paintText.setTextSize(dpToPx(14.0f));
-            this.paintText.setColor(Color.parseColor("#64748B"));
+            this.paintText.setColor(Color.parseColor("#94A3B8"));
             canvas.drawText("নিবন্ধিত দিনের ডাটা পর্যাপ্ত নয়", chartHeight / 2.0f, height / 2.0f, this.paintText);
         }
     }
