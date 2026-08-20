@@ -42,9 +42,11 @@ public class AccountingService {
         public double totalSales;                  // মোট বিক্রি = নগদ বিক্রি + বাকি বিক্রি (৳)
         public double bakiCollection;              // বকেয়া আদায় / জমা (৳)
         public double totalPurchases;              // পণ্য ক্রয় / মাল কেনা (৳)
+        public double totalShopExpenses;           // দোকানের পরিচালনা খরচ (৳)
         public double totalOperatingExpenses;      // দোকান খরচ (৳)
+        public double totalHomeExpenses;           // বাড়ির জন্য খরচ / ক্যাশ ড্র (৳)
         public double totalLegacyExpenses;         // সাধারণ/পূর্ববর্তী খরচ (৳)
-        public double totalCashOutflow;            // সর্বমোট ক্যাশ ব্যয় (Purchases + OpEx + Legacy)
+        public double totalCashOutflow;            // সর্বমোট ক্যাশ ব্যয় (Purchases + Shop + Home + Legacy)
         public double adjustments;                 // সমন্বয় (+/-)
         public double expectedClosingCash;         // প্রত্যাশিত সমাপনী ক্যাশ / ক্যাশ পজিশন
         public double actualAvailableCash;         // প্রকৃত গোনা ক্যাশ (হাতে থাকা ক্যাশ)
@@ -53,7 +55,23 @@ public class AccountingService {
         
         public double estimatedGrossMarginRate;    // আনুমানিক মোট মুনাফার হার (যেমন: 0.20 বা ২০%)
         public double estimatedGrossProfit;        // আনুমানিক মোট লাভ = মোট বিক্রি × মার্জিন
-        public double estimatedNetProfit;          // আনুমানিক নিট লাভ = মোট লাভ - দোকান খরচ
+        public double estimatedBusinessProfit;     // ব্যবসায়ের নিট লাভ = মোট লাভ - দোকান খরচ
+        public double estimatedNetProfit;          // নিট লাভ (ব্যবসায় লাভ)
+        public double profitRemaining;             // মুনাফা অবশিষ্ট = ব্যবসায়ের নিট লাভ - বাড়ির খরচ
+    }
+
+    public static class MonthlyAccountingSummary {
+        public String monthYear;
+        public double totalSales;
+        public double cashSales;
+        public double creditSales;
+        public double bakiCollection;
+        public double shopExpenses;
+        public double homeExpenses;
+        public double purchaseStock;
+        public double grossProfit;
+        public double netProfit;
+        public double closingCash;
     }
 
     private static AccountingService instance;
@@ -133,10 +151,11 @@ public class AccountingService {
         // 2. Available cash (actual counted cash)
         summary.actualAvailableCash = this.storageManager.loadAvailableCash(normalizedKey);
 
-        // 3. Expenses breakdown (Purchases vs Operating Expenses vs Legacy)
+        // 3. Expenses breakdown (Purchases vs Shop/Operating Expenses vs Home Expenses vs Legacy)
         List<ExpenseModel> expenses = this.storageManager.loadExpenses(normalizedKey);
         double purchases = 0.0;
-        double operating = 0.0;
+        double shopExpenses = 0.0;
+        double homeExpenses = 0.0;
         double legacy = 0.0;
 
         Set<String> seenExpenseIds = new HashSet<>();
@@ -154,17 +173,21 @@ public class AccountingService {
                 double amt = Math.max(0.0, exp.getAmount());
                 if (exp.isPurchase()) {
                     purchases += amt;
-                } else if (exp.isOperatingExpense()) {
-                    operating += amt;
+                } else if (exp.isHomeExpense()) {
+                    homeExpenses += amt;
+                } else if (exp.isShopExpense()) {
+                    shopExpenses += amt;
                 } else {
                     legacy += amt;
                 }
             }
         }
         summary.totalPurchases = purchases;
-        summary.totalOperatingExpenses = operating;
+        summary.totalShopExpenses = shopExpenses;
+        summary.totalOperatingExpenses = shopExpenses;
+        summary.totalHomeExpenses = homeExpenses;
         summary.totalLegacyExpenses = legacy;
-        summary.totalCashOutflow = purchases + operating + legacy;
+        summary.totalCashOutflow = purchases + shopExpenses + homeExpenses + legacy;
         summary.estimatedStockAddition = purchases;
 
         // 4. Baki Records (Credit Sales & Baki Collections on this date)
@@ -223,8 +246,11 @@ public class AccountingService {
         // 8. Estimated Profit Calculation
         summary.estimatedGrossMarginRate = getEstimatedGrossMarginRate();
         summary.estimatedGrossProfit = summary.totalSales * summary.estimatedGrossMarginRate;
-        // Operating expenses are deducted from gross profit; purchases are resale inventory (not profit expenses)
-        summary.estimatedNetProfit = summary.estimatedGrossProfit - summary.totalOperatingExpenses;
+        // Shop operating expenses are deducted from gross profit; purchases are resale inventory (not profit expenses)
+        summary.estimatedBusinessProfit = summary.estimatedGrossProfit - summary.totalShopExpenses;
+        summary.estimatedNetProfit = summary.estimatedBusinessProfit;
+        // Profit remaining after home withdrawals
+        summary.profitRemaining = summary.estimatedBusinessProfit - summary.totalHomeExpenses;
 
         return summary;
     }
@@ -257,6 +283,14 @@ public class AccountingService {
         return calculateDailySummary(dateKey).totalPurchases;
     }
 
+    public double calculateShopExpenseTotal(String dateKey) {
+        return calculateDailySummary(dateKey).totalShopExpenses;
+    }
+
+    public double calculateHomeExpenseTotal(String dateKey) {
+        return calculateDailySummary(dateKey).totalHomeExpenses;
+    }
+
     public double calculateOperatingExpenseTotal(String dateKey) {
         return calculateDailySummary(dateKey).totalOperatingExpenses;
     }
@@ -269,8 +303,16 @@ public class AccountingService {
         return calculateDailySummary(dateKey).estimatedGrossProfit;
     }
 
+    public double calculateEstimatedBusinessProfit(String dateKey) {
+        return calculateDailySummary(dateKey).estimatedBusinessProfit;
+    }
+
     public double calculateEstimatedNetProfit(String dateKey) {
         return calculateDailySummary(dateKey).estimatedNetProfit;
+    }
+
+    public double calculateProfitRemaining(String dateKey) {
+        return calculateDailySummary(dateKey).profitRemaining;
     }
 
     public double calculateStockAddition(String dateKey) {
@@ -396,6 +438,13 @@ public class AccountingService {
      * Records an operating expense (rent, electric bill, salary, food/tea, etc.)
      */
     public synchronized boolean recordOperatingExpense(String expenseName, double amount, String date, String time) {
+        return recordShopExpense(expenseName, amount, date, time, null);
+    }
+
+    /**
+     * Records a shop operating expense (দোকান খরচ)
+     */
+    public synchronized boolean recordShopExpense(String expenseName, double amount, String date, String time, String note) {
         if (expenseName == null || expenseName.trim().isEmpty() || amount <= 0.0) {
             return false;
         }
@@ -408,8 +457,44 @@ public class AccountingService {
                 amount,
                 cleanDate,
                 cleanTime,
-                ExpenseModel.TYPE_OPERATING_EXPENSE
+                ExpenseModel.TYPE_OPERATING_EXPENSE,
+                ExpenseModel.TYPE_SHOP
         );
+        if (note != null && !note.trim().isEmpty()) {
+            expense.setNote(note.trim());
+        }
+
+        List<ExpenseModel> list = this.storageManager.loadExpenses(cleanDate);
+        if (list == null) list = new ArrayList<>();
+        list.add(0, expense);
+        this.storageManager.saveExpenses(cleanDate, list);
+        this.storageManager.saveProductSuggestion(expenseName.trim());
+        this.storageManager.saveActiveDate(cleanDate);
+        return true;
+    }
+
+    /**
+     * Records a home withdrawal / family expense (বাড়ির খরচ / বাড়ি নেওয়া)
+     */
+    public synchronized boolean recordHomeExpense(String expenseName, double amount, String date, String time, String note) {
+        if (expenseName == null || expenseName.trim().isEmpty() || amount <= 0.0) {
+            return false;
+        }
+        String cleanDate = normalizeDateKey(date);
+        String cleanTime = (time != null && !time.trim().isEmpty()) ? time.trim() : new SimpleDateFormat("hh:mm a", Locale.US).format(new Date());
+
+        ExpenseModel expense = new ExpenseModel(
+                UUID.randomUUID().toString(),
+                expenseName.trim(),
+                amount,
+                cleanDate,
+                cleanTime,
+                ExpenseModel.TYPE_HOME,
+                ExpenseModel.TYPE_HOME
+        );
+        if (note != null && !note.trim().isEmpty()) {
+            expense.setNote(note.trim());
+        }
 
         List<ExpenseModel> list = this.storageManager.loadExpenses(cleanDate);
         if (list == null) list = new ArrayList<>();
@@ -517,5 +602,44 @@ public class AccountingService {
         this.storageManager.saveFordiRecords(allFordi);
 
         return true;
+    }
+
+    public MonthlyAccountingSummary calculateCurrentMonthSummary() {
+        String currentMonthKey = new SimpleDateFormat("-MM-yyyy", Locale.US).format(new Date());
+        MonthlyAccountingSummary summary = new MonthlyAccountingSummary();
+        summary.monthYear = new SimpleDateFormat("MMMM yyyy", new Locale("bn", "BD")).format(new Date());
+
+        List<String> activeDates = storageManager.getActiveDates();
+        for (String d : activeDates) {
+            if (d != null && d.endsWith(currentMonthKey)) {
+                DailyAccountingSummary day = calculateDailySummary(d);
+                summary.totalSales += day.totalSales;
+                summary.cashSales += day.cashSales;
+                summary.creditSales += day.creditSales;
+                summary.bakiCollection += day.bakiCollection;
+                summary.shopExpenses += day.totalShopExpenses + day.totalOperatingExpenses + day.totalLegacyExpenses;
+                summary.homeExpenses += day.totalHomeExpenses;
+                summary.purchaseStock += day.totalPurchases;
+                summary.grossProfit += day.estimatedGrossProfit;
+                summary.netProfit += day.estimatedBusinessProfit;
+            }
+        }
+        return summary;
+    }
+
+    public List<ExpenseModel> getHomeExpenses() {
+        List<ExpenseModel> allHome = new ArrayList<>();
+        List<String> activeDates = storageManager.getActiveDates();
+        for (String d : activeDates) {
+            List<ExpenseModel> list = storageManager.loadExpenses(d);
+            if (list != null) {
+                for (ExpenseModel exp : list) {
+                    if (exp != null && exp.isHomeExpense()) {
+                        allHome.add(exp);
+                    }
+                }
+            }
+        }
+        return allHome;
     }
 }

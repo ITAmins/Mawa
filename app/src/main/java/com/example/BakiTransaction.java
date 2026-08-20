@@ -10,8 +10,11 @@ public class BakiTransaction implements Serializable {
     private double amount;
     private String note;
     private double balanceAfter;
+    private long updatedAt;
+    private long deletedAt;
 
     public BakiTransaction() {
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public BakiTransaction(String id, String date, String time, String type, double amount, String note, double balanceAfter) {
@@ -22,6 +25,7 @@ public class BakiTransaction implements Serializable {
         this.amount = amount;
         this.note = note;
         this.balanceAfter = balanceAfter;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public String getId() {
@@ -78,5 +82,21 @@ public class BakiTransaction implements Serializable {
 
     public void setBalanceAfter(double balanceAfter) {
         this.balanceAfter = balanceAfter;
+    }
+
+    public long getUpdatedAt() {
+        return this.updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public long getDeletedAt() {
+        return this.deletedAt;
+    }
+
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }

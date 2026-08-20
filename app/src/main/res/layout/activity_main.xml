@@ -81,6 +81,38 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true">
 
+                    <!-- Cloud Sync Header Indicator -->
+                    <LinearLayout
+                        android:id="@+id/btnHeaderCloudSync"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:background="@drawable/shape_capsule_white"
+                        android:backgroundTint="#F8FAFC"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="8dp"
+                        android:layout_marginEnd="6dp">
+
+                        <ImageView
+                            android:id="@+id/ivHeaderSyncIcon"
+                            android:layout_width="15dp"
+                            android:layout_height="15dp"
+                            android:src="@drawable/ic_cloud"
+                            android:contentDescription="ক্লাউড স্ট্যাটাস"
+                            app:tint="#64748B" />
+
+                        <TextView
+                            android:id="@+id/tvHeaderSyncText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="অফলাইন"
+                            android:textColor="#64748B"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
                     <ImageView
                         android:id="@+id/btnMenu"
                         android:layout_width="36dp"
@@ -1268,8 +1300,11 @@
                     android:orientation="vertical"
                     android:visibility="gone">
 
-                    <!-- Fordi Metrics Header -->
+                    <!-- ========================================== -->
+                    <!-- MAIN FORDI TABLE CARD                      -->
+                    <!-- ========================================== -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardFordiMainTable"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
@@ -1285,9 +1320,11 @@
                             android:orientation="vertical"
                             android:padding="16dp">
 
+                            <!-- Header: "ফর্দ" Title + Subtitle and "＋" Add Button -->
                             <RelativeLayout
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content">
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="12dp">
 
                                 <LinearLayout
                                     android:layout_width="wrap_content"
@@ -1297,58 +1334,385 @@
                                     android:layout_centerVertical="true">
 
                                     <TextView
+                                        android:id="@+id/tvFordiMainTitle"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="আজকের বাজার ফর্দ"
-                                        android:textColor="#64748B"
-                                        android:textSize="12sp"
+                                        android:text="ফর্দ"
+                                        android:textColor="#0F172A"
+                                        android:textSize="20sp"
                                         android:textStyle="bold" />
 
                                     <TextView
-                                        android:id="@+id/tvTotalFordiBudget"
+                                        android:id="@+id/tvFordiMainDateSubtitle"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginTop="2dp"
-                                        android:text="৳ ০"
-                                        android:textColor="#0F172A"
-                                        android:textSize="26sp"
-                                        android:textStyle="bold" />
+                                        android:text="বাজার ক্রয়ের ফর্দ তালিকা"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
                                 </LinearLayout>
+
+                                <!-- Quick Add / Focus Button -->
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnQuickAddFordiItem"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:insetLeft="0dp"
+                                    android:insetTop="0dp"
+                                    android:insetRight="0dp"
+                                    android:insetBottom="0dp"
+                                    android:padding="0dp"
+                                    android:contentDescription="পণ্য যোগ করুন"
+                                    app:icon="@drawable/ic_plus"
+                                    app:iconSize="20dp"
+                                    app:iconGravity="textStart"
+                                    app:iconPadding="0dp"
+                                    app:iconTint="#FFFFFF"
+                                    app:backgroundTint="#7C3AED"
+                                    app:cornerRadius="22dp" />
+                            </RelativeLayout>
+
+                            <!-- Direct Inline Entry Row (কোন পপআপ ছাড়াই লাইনে দাম ও পণ্য এন্ট্রি) -->
+                            <LinearLayout
+                                android:id="@+id/layoutFordiInlineAddBar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:layout_marginBottom="8dp"
+                                android:background="@drawable/bg_fordi_input_box"
+                                android:orientation="vertical"
+                                android:padding="8dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <AutoCompleteTextView
+                                        android:id="@+id/etFordiInlineProductName"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_weight="1.6"
+                                        android:background="@drawable/bg_fordi_cell_input"
+                                        android:hint="পণ্যের নাম (চিনি, সয়াবিন তেল...)"
+                                        android:imeOptions="actionNext"
+                                        android:inputType="textCapWords"
+                                        android:paddingHorizontal="10dp"
+                                        android:singleLine="true"
+                                        android:textColor="#0F172A"
+                                        android:textColorHint="#94A3B8"
+                                        android:textSize="13sp" />
+
+                                    <Spinner
+                                        android:id="@+id/spFordiInlineUnit"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_marginStart="6dp"
+                                        android:layout_weight="1.0"
+                                        android:background="@drawable/bg_fordi_cell_input" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <EditText
+                                        android:id="@+id/etFordiInlineQty"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_weight="0.8"
+                                        android:background="@drawable/bg_fordi_cell_input"
+                                        android:gravity="center"
+                                        android:hint="পরিমাণ"
+                                        android:imeOptions="actionNext"
+                                        android:inputType="numberDecimal"
+                                        android:text="1"
+                                        android:textColor="#0F172A"
+                                        android:textColorHint="#94A3B8"
+                                        android:textSize="12.5sp" />
+
+                                    <EditText
+                                        android:id="@+id/etFordiInlineBuyRate"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_marginStart="4dp"
+                                        android:layout_weight="1.1"
+                                        android:background="@drawable/bg_fordi_cell_input"
+                                        android:gravity="center"
+                                        android:hint="ক্রয় দর (৳)"
+                                        android:imeOptions="actionNext"
+                                        android:inputType="numberDecimal"
+                                        android:textColor="#0F172A"
+                                        android:textColorHint="#94A3B8"
+                                        android:textSize="12.5sp" />
+
+                                    <EditText
+                                        android:id="@+id/etFordiInlineSellRate"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_marginStart="4dp"
+                                        android:layout_weight="1.1"
+                                        android:background="@drawable/bg_fordi_cell_input"
+                                        android:gravity="center"
+                                        android:hint="বেচা দর (৳)"
+                                        android:imeOptions="actionDone"
+                                        android:inputType="numberDecimal"
+                                        android:textColor="#0F172A"
+                                        android:textColorHint="#94A3B8"
+                                        android:textSize="12.5sp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnFordiInlineAdd"
+                                        style="@style/Widget.Material3.Button.TonalButton"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="38dp"
+                                        android:layout_marginStart="6dp"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:paddingHorizontal="10dp"
+                                        android:text="➕ যোগ"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold"
+                                        app:backgroundTint="#7C3AED"
+                                        app:cornerRadius="8dp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Table Column Header: পণ্য | পরিমাণ | ক্রয় দর | বেচা দর | মোট -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#F8FAFC"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="4dp"
+                                android:paddingVertical="8dp"
+                                android:weightSum="5.3">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1.3"
+                                    android:ellipsize="end"
+                                    android:singleLine="true"
+                                    android:text="পণ্য"
+                                    android:textColor="#475569"
+                                    android:textSize="12.5sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="0.85"
+                                    android:ellipsize="end"
+                                    android:gravity="center"
+                                    android:singleLine="true"
+                                    android:text="পরিমাণ"
+                                    android:textColor="#475569"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1.0"
+                                    android:ellipsize="end"
+                                    android:gravity="center"
+                                    android:singleLine="true"
+                                    android:text="ক্রয় দর"
+                                    android:textColor="#475569"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1.0"
+                                    android:ellipsize="end"
+                                    android:gravity="center"
+                                    android:singleLine="true"
+                                    android:text="বেচা দর"
+                                    android:textColor="#475569"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="0.85"
+                                    android:ellipsize="end"
+                                    android:gravity="end"
+                                    android:singleLine="true"
+                                    android:text="মোট"
+                                    android:textColor="#475569"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="1dp"
+                                    android:layout_weight="0.3" />
+                            </LinearLayout>
+
+                            <!-- Divider line ────────────────── -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1.5dp"
+                                android:background="#CBD5E1"
+                                android:layout_marginTop="2dp"
+                                android:layout_marginBottom="4dp" />
+
+                            <!-- Dynamic Fordi Table Rows Container -->
+                            <LinearLayout
+                                android:id="@+id/layoutFordiTableRows"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" />
+
+                            <!-- Fordi Empty State inside Table -->
+                            <LinearLayout
+                                android:id="@+id/layoutFordiEmptyState"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:orientation="vertical"
+                                android:paddingVertical="20dp"
+                                android:visibility="gone">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:text="ফর্দে এখনও কোনো পণ্য নেই"
+                                    android:textColor="#0F172A"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:layout_marginBottom="12dp"
+                                    android:gravity="center"
+                                    android:text="আজকের বাজারের জন্য পণ্য যোগ করুন।"
+                                    android:textColor="#64748B"
+                                    android:textSize="12sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnEmptyStateAddFordiItem"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="44dp"
+                                    android:text="পণ্য যোগ করুন"
+                                    android:textColor="#7C3AED"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"
+                                    app:icon="@drawable/ic_plus"
+                                    app:iconSize="16dp"
+                                    app:iconTint="#7C3AED"
+                                    app:backgroundTint="#F5F3FF"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+
+                            <!-- Bottom Divider line ────────────────── -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1.5dp"
+                                android:background="#CBD5E1"
+                                android:layout_marginTop="4dp"
+                                android:layout_marginBottom="4dp" />
+
+                            <!-- Summary Row: "মোট 1,510" -->
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="4dp">
 
                                 <LinearLayout
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_alignParentEnd="true"
+                                    android:layout_alignParentStart="true"
                                     android:layout_centerVertical="true"
-                                    android:background="@drawable/shape_capsule_white"
-                                    android:backgroundTint="#F5F3FF"
-                                    android:orientation="vertical"
-                                    android:paddingHorizontal="12dp"
-                                    android:paddingVertical="6dp"
-                                    android:gravity="center">
+                                    android:orientation="vertical">
 
                                     <TextView
+                                        android:id="@+id/tvFordiItemSummaryCount"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="মোট পণ্য"
-                                        android:textColor="#7C3AED"
-                                        android:textSize="10sp"
-                                        android:textStyle="bold" />
+                                        android:text="০টি পণ্য"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
 
                                     <TextView
-                                        android:id="@+id/tvTotalFordiCount"
+                                        android:id="@+id/tvFordiTableProfitPreview"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="০টি"
-                                        android:textColor="#5B21B6"
-                                        android:textSize="16sp"
+                                        android:text="সম্ভাব্য লাভ: ৳ ০"
+                                        android:textColor="#2563EB"
+                                        android:textSize="11sp"
                                         android:textStyle="bold" />
                                 </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvFordiTableGrandTotal"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:text="মোট ০"
+                                    android:textColor="#0F172A"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
                             </RelativeLayout>
+
+                            <!-- Action Buttons inside table card -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="10dp">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnFordiPostToAccounting"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1.3"
+                                    android:layout_marginEnd="6dp"
+                                    android:text="🛒 হিসাবে যোগ করুন"
+                                    android:textColor="#0D9488"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:backgroundTint="#CCFBF1"
+                                    app:cornerRadius="12dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnFordiShareTable"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="0.9"
+                                    android:layout_marginStart="6dp"
+                                    android:text="📤 শেয়ার"
+                                    android:textColor="#475569"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:backgroundTint="#F1F5F9"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Add Fordi Item Search & Create -->
+                    <!-- Search and Secondary Actions -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -1370,12 +1734,12 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginBottom="10dp"
-                                android:hint="পণ্যের নাম লিখুন (যেমন: তেল, পেঁয়াজ, চিনি)"
+                                android:hint="পণ্য খুঁজুন (যেমন: তেল, চিনি, ডাল)"
                                 app:boxCornerRadiusBottomEnd="12dp"
                                 app:boxCornerRadiusBottomStart="12dp"
                                 app:boxCornerRadiusTopEnd="12dp"
                                 app:boxCornerRadiusTopStart="12dp"
-                                app:boxStrokeColor="#2563EB"
+                                app:boxStrokeColor="#7C3AED"
                                 app:startIconDrawable="@drawable/ic_search"
                                 app:startIconTint="#64748B">
 
@@ -1392,46 +1756,40 @@
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnCreateFordi"
                                 android:layout_width="match_parent"
-                                android:layout_height="46dp"
-                                android:text="+ নতুন ফর্দ আইটেম যোগ করুন"
+                                android:layout_height="44dp"
+                                android:text="➕ নতুন ফর্দ তৈরি করুন"
                                 android:textColor="#FFFFFF"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
                                 app:backgroundTint="#7C3AED"
-                                app:cornerRadius="14dp" />
+                                app:cornerRadius="12dp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Fordi Items List -->
+                    <!-- Past Fordi Lists Container (for history/switching) -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="সংরক্ষিত ফর্দ তালিকা"
+                        android:textColor="#0F172A"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- Fordi Items / Lists -->
                     <LinearLayout
                         android:id="@+id/layoutFordiList"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
 
-                    <!-- Fordi Empty State -->
+                    <!-- Compatibility hidden views -->
                     <LinearLayout
-                        android:id="@+id/layoutFordiEmptyState"
-                        android:layout_width="match_parent"
-                        android:layout_height="140dp"
-                        android:gravity="center"
-                        android:orientation="vertical"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
                         android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:layout_marginBottom="6dp"
-                            android:src="@drawable/ic_empty_state"
-                            android:contentDescription="ফর্দ খালি" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:text="আজকের কোনো ফর্দ আইটেম তৈরি নেই"
-                            android:textColor="#64748B"
-                            android:textSize="13sp" />
+                        <TextView android:id="@+id/tvTotalFordiBudget" android:layout_width="0dp" android:layout_height="0dp" />
+                        <TextView android:id="@+id/tvTotalFordiCount" android:layout_width="0dp" android:layout_height="0dp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -2217,6 +2575,255 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:visibility="gone">
+
+                    <!-- 1. Supabase Cloud Account & Auto Sync -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#DBEAFE"
+                        app:strokeWidth="1.5dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="12dp">
+
+                                <FrameLayout
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="@drawable/shape_circle"
+                                    android:backgroundTint="#EFF6FF"
+                                    android:layout_marginEnd="10dp">
+
+                                    <ImageView
+                                        android:layout_width="22dp"
+                                        android:layout_height="22dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_cloud"
+                                        android:contentDescription="ক্লাউড একাউন্ট"
+                                        app:tint="#2563EB" />
+                                </FrameLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="মাওয়া ক্লাউড ও অটো-সিঙ্ক"
+                                        android:textColor="#0F172A"
+                                        android:textSize="15sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvSupabaseSyncStatusText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="ক্লাউড ব্যাকআপের জন্য লগইন করুন"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvSupabaseSyncBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/shape_capsule_white"
+                                    android:backgroundTint="#F1F5F9"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp"
+                                    android:text="লগইন নেই"
+                                    android:textColor="#64748B"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/layoutUserInfoCard"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/shape_hero_card_background"
+                                android:backgroundTint="#F8FAFC"
+                                android:orientation="vertical"
+                                android:padding="12dp"
+                                android:layout_marginBottom="12dp">
+
+                                <TextView
+                                    android:id="@+id/tvUserDisplayName"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="মাওয়া গ্রাহক"
+                                    android:textColor="#0F172A"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvUserAccountEmail"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="অফলাইন মোড (কোনো একাউন্ট যুক্ত নেই)"
+                                    android:textColor="#64748B"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <ProgressBar
+                                android:id="@+id/progressSupabaseSync"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="4dp"
+                                android:indeterminate="true"
+                                android:visibility="gone"
+                                android:layout_marginBottom="10dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnSupabaseSyncNow"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="🔄 এখনই সিঙ্ক"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:backgroundTint="#2563EB"
+                                    app:cornerRadius="12dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnSupabaseAuthAction"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
+                                    android:text="🔑 লগইন / সাইনআপ"
+                                    android:textColor="#2563EB"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:backgroundTint="#EFF6FF"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 2. Home Accounting (সংসার ও ব্যক্তিগত খরচ) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#E2E8F0"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="10dp">
+
+                                <FrameLayout
+                                    android:layout_width="38dp"
+                                    android:layout_height="38dp"
+                                    android:background="@drawable/shape_circle"
+                                    android:backgroundTint="#FDF2F8"
+                                    android:layout_marginEnd="10dp">
+
+                                    <ImageView
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_home_expense"
+                                        android:contentDescription="সংসার খরচ"
+                                        app:tint="#DB2777" />
+                                </FrameLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="বাড়ির খরচ ও সংসার হিসাব"
+                                        android:textColor="#0F172A"
+                                        android:textSize="15sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvHomeExpenseMonthlySummary"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="দোকানের ক্যাশ থেকে সংসার খরচ আলাদা রাখুন"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnAddHomeExpenseFromMore"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="➕ সংসার খরচ লিখুন"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    app:backgroundTint="#DB2777"
+                                    app:cornerRadius="12dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnViewHomeExpensesList"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
+                                    android:text="📋 খরচের তালিকা"
+                                    android:textColor="#DB2777"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    app:backgroundTint="#FDF2F8"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
                     <!-- Google Sheets Cloud Sync -->
                     <com.google.android.material.card.MaterialCardView

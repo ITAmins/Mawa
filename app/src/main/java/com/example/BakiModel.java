@@ -13,9 +13,12 @@ public class BakiModel implements Serializable {
     private String dueDate;
     private String details;
     private List<BakiTransaction> transactions;
+    private long updatedAt;
+    private long deletedAt;
 
     public BakiModel() {
         this.transactions = new ArrayList<>();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public BakiModel(String id, String customerName, double amount, String date, String details) {
@@ -27,6 +30,7 @@ public class BakiModel implements Serializable {
         this.phone = "";
         this.dueDate = "";
         this.transactions = new ArrayList<>();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public BakiModel(String id, String customerName, String phone, double amount, String date, String dueDate, String details) {
@@ -38,6 +42,7 @@ public class BakiModel implements Serializable {
         this.dueDate = dueDate != null ? dueDate : "";
         this.details = details;
         this.transactions = new ArrayList<>();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public String getId() {
@@ -112,5 +117,22 @@ public class BakiModel implements Serializable {
             this.transactions = new ArrayList<>();
         }
         this.transactions.add(transaction);
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    public long getUpdatedAt() {
+        return this.updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public long getDeletedAt() {
+        return this.deletedAt;
+    }
+
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }

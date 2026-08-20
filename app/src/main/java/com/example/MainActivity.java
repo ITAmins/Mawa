@@ -43,6 +43,7 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Filter;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
@@ -103,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
     private List<ExpenseModel> allExpenses = new ArrayList();
     private String searchFilterText = "";
     private String currentBakiFilter = "ALL";
+    private String currentActiveFordiId = null;
     private boolean isUpdatingInputs = false;
     private boolean isExpensesExpanded = false;
     private boolean isDashboardFilterThisMonth = false;
@@ -846,6 +848,14 @@ public class MainActivity extends AppCompatActivity {
         };
         this.binding.btnSuggestSabekCash.setOnClickListener(sabekSuggestClick);
         this.binding.btnApplySabekSuggestion.setOnClickListener(sabekSuggestClick);
+        if (this.binding.btnHeaderCloudSync != null) {
+            this.binding.btnHeaderCloudSync.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showCloudSyncQuickDialog();
+                }
+            });
+        }
         this.binding.btnMenu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1774,11 +1784,519 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateCloudBackupUI() {
         setupCloudBackup();
+        updateSupabaseSyncCardUI();
+        updateHomeExpensesCardUI();
+        updateHeaderSyncStatusUI();
     }
 
     private void setupCloudBackup() {
         setupGoogleSheetsSync();
+        setupSupabaseSync();
+        setupHomeExpensesMoreCard();
         updateUserProfileHeader();
+        updateHeaderSyncStatusUI();
+    }
+
+    private void updateHeaderSyncStatusUI() {
+        if (this.binding == null || this.binding.btnHeaderCloudSync == null) return;
+        SupabaseAuthManager authManager = SupabaseAuthManager.getInstance(this);
+        MawaSyncManager syncManager = MawaSyncManager.getInstance(this);
+
+        if (syncManager.isSyncing()) {
+            if (this.binding.tvHeaderSyncText != null) {
+                this.binding.tvHeaderSyncText.setText("সিঙ্ক হচ্ছে...");
+            }
+            if (this.binding.ivHeaderSyncIcon != null) {
+                this.binding.ivHeaderSyncIcon.setImageResource(R.drawable.ic_cloud);
+                this.binding.ivHeaderSyncIcon.setImageTintList(ColorStateList.valueOf(Color.parseColor("#2563EB")));
+            }
+            this.binding.btnHeaderCloudSync.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#DBEAFE")));
+        } else if (authManager.isLoggedIn()) {
+            if (this.binding.tvHeaderSyncText != null) {
+                this.binding.tvHeaderSyncText.setText("ক্লাউড সিঙ্ক");
+            }
+            if (this.binding.ivHeaderSyncIcon != null) {
+                this.binding.ivHeaderSyncIcon.setImageResource(R.drawable.ic_cloud);
+                this.binding.ivHeaderSyncIcon.setImageTintList(ColorStateList.valueOf(Color.parseColor("#059669")));
+            }
+            this.binding.btnHeaderCloudSync.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#ECFDF5")));
+        } else {
+            if (this.binding.tvHeaderSyncText != null) {
+                this.binding.tvHeaderSyncText.setText("অফলাইন");
+            }
+            if (this.binding.ivHeaderSyncIcon != null) {
+                this.binding.ivHeaderSyncIcon.setImageResource(R.drawable.ic_cloud);
+                this.binding.ivHeaderSyncIcon.setImageTintList(ColorStateList.valueOf(Color.parseColor("#64748B")));
+            }
+            this.binding.btnHeaderCloudSync.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#F1F5F9")));
+        }
+    }
+
+    private void setupSupabaseSync() {
+        if (this.binding == null) return;
+        if (this.binding.btnSupabaseAuthAction != null) {
+            this.binding.btnSupabaseAuthAction.setOnClickListener(v -> showSupabaseAuthDialog());
+        }
+        if (this.binding.btnSupabaseSyncNow != null) {
+            this.binding.btnSupabaseSyncNow.setOnClickListener(v -> performSupabaseManualSync());
+        }
+        updateSupabaseSyncCardUI();
+    }
+
+    private void updateSupabaseSyncCardUI() {
+        if (this.binding == null) return;
+        SupabaseAuthManager authManager = SupabaseAuthManager.getInstance(this);
+        MawaSyncManager syncManager = MawaSyncManager.getInstance(this);
+
+        boolean loggedIn = authManager.isLoggedIn();
+        if (this.binding.tvUserAccountEmail != null) {
+            if (loggedIn) {
+                String email = authManager.getUserEmail();
+                this.binding.tvUserAccountEmail.setText(!TextUtils.isEmpty(email) ? ("লগইন: " + email) : "সক্রিয় ক্লাউড অ্যাকাউন্ট");
+            } else {
+                this.binding.tvUserAccountEmail.setText("অফলাইন মোড (কোনো একাউন্ট যুক্ত নেই)");
+            }
+        }
+
+        if (this.binding.tvUserDisplayName != null) {
+            if (loggedIn) {
+                String name = authManager.getUserName();
+                this.binding.tvUserDisplayName.setText(!TextUtils.isEmpty(name) ? name : "মাওয়া স্টোর গ্রাহক (ক্লাউড সক্রিয়)");
+            } else {
+                this.binding.tvUserDisplayName.setText("মাওয়া স্টোর (অফলাইন)");
+            }
+        }
+
+        if (this.binding.btnSupabaseAuthAction != null) {
+            if (loggedIn) {
+                this.binding.btnSupabaseAuthAction.setText("🚪 লগআউট");
+                this.binding.btnSupabaseAuthAction.setTextColor(Color.parseColor("#EF4444"));
+            } else {
+                this.binding.btnSupabaseAuthAction.setText("🔑 লগইন / রেজিস্টার");
+                this.binding.btnSupabaseAuthAction.setTextColor(Color.parseColor("#2563EB"));
+            }
+        }
+    }
+
+    private void performSupabaseManualSync() {
+        if (this.binding != null && this.binding.progressSupabaseSync != null) {
+            this.binding.progressSupabaseSync.setVisibility(View.VISIBLE);
+        }
+        if (this.binding != null && this.binding.btnSupabaseSyncNow != null) {
+            this.binding.btnSupabaseSyncNow.setEnabled(false);
+        }
+        updateHeaderSyncStatusUI();
+
+        MawaSyncManager.getInstance(this).syncAsync(new MawaSyncManager.SyncCallback() {
+            @Override
+            public void onSyncStarted() {
+                runOnUiThread(() -> updateHeaderSyncStatusUI());
+            }
+
+            @Override
+            public void onSyncSuccess(String message) {
+                runOnUiThread(() -> {
+                    if (binding != null && binding.progressSupabaseSync != null) {
+                        binding.progressSupabaseSync.setVisibility(View.GONE);
+                    }
+                    if (binding != null && binding.btnSupabaseSyncNow != null) {
+                        binding.btnSupabaseSyncNow.setEnabled(true);
+                    }
+                    updateSupabaseSyncCardUI();
+                    updateHeaderSyncStatusUI();
+                    if (viewModel != null) {
+                        viewModel.loadSavedData();
+                    }
+                    updateDashboardUI();
+                    updateBakiKhataUI();
+                    updateFordiKhataUI();
+                    Toast.makeText(MainActivity.this, "✅ " + message, Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onSyncFailed(String error) {
+                runOnUiThread(() -> {
+                    if (binding != null && binding.progressSupabaseSync != null) {
+                        binding.progressSupabaseSync.setVisibility(View.GONE);
+                    }
+                    if (binding != null && binding.btnSupabaseSyncNow != null) {
+                        binding.btnSupabaseSyncNow.setEnabled(true);
+                    }
+                    updateSupabaseSyncCardUI();
+                    updateHeaderSyncStatusUI();
+                    Toast.makeText(MainActivity.this, "⚠️ " + error, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void showSupabaseAuthDialog() {
+        final SupabaseAuthManager authManager = SupabaseAuthManager.getInstance(this);
+        if (authManager.isLoggedIn()) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("লগআউট নিশ্চিতকরণ")
+                    .setMessage("আপনি কি \"" + authManager.getUserEmail() + "\" অ্যাকাউন্ট থেকে লগআউট করতে চান? আপনার লোকাল ডেটা সংরক্ষিত থাকবে।")
+                    .setPositiveButton("লগআউট", (dialog, which) -> {
+                        authManager.logout();
+                        updateSupabaseSyncCardUI();
+                        updateHeaderSyncStatusUI();
+                        Toast.makeText(MainActivity.this, "লগআউট সম্পন্ন হয়েছে", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("বাতিল", null)
+                    .show();
+            return;
+        }
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(20), dpToPx(12), dpToPx(20), dpToPx(8));
+
+        TextView tvHint = new TextView(this);
+        tvHint.setText("Supabase ক্লাউড ব্যাকআপ সক্রিয় করতে আপনার ইমেইল ও পাসওয়ার্ড লিখুন:");
+        tvHint.setTextColor(Color.parseColor("#475569"));
+        tvHint.setTextSize(13.0f);
+        tvHint.setPadding(0, 0, 0, dpToPx(12));
+        root.addView(tvHint);
+
+        final TextInputLayout tilEmail = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilEmail.setHint("ইমেইল অ্যাড্রেস (Email)");
+        tilEmail.setBoxStrokeColor(Color.parseColor("#059669"));
+        final TextInputEditText etEmail = new TextInputEditText(this);
+        etEmail.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        tilEmail.addView(etEmail);
+        root.addView(tilEmail);
+
+        final TextInputLayout tilPass = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilPass.setHint("পাসওয়ার্ড (Password - কমপক্ষে ৬ অক্ষর)");
+        tilPass.setBoxStrokeColor(Color.parseColor("#059669"));
+        LinearLayout.LayoutParams passLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        passLp.setMargins(0, dpToPx(10), 0, 0);
+        tilPass.setLayoutParams(passLp);
+        final TextInputEditText etPass = new TextInputEditText(this);
+        etPass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        tilPass.addView(etPass);
+        root.addView(tilPass);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("☁️ ক্লাউড অ্যাকাউন্ট লগইন / সাইনআপ")
+                .setView(root)
+                .setPositiveButton("লগইন", null)
+                .setNeutralButton("নতুন অ্যাকাউন্ট (সাইন আপ)", null)
+                .setNegativeButton("বাতিল", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            Button btnLogin = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+            Button btnRegister = dialog.getButton(DialogInterface.BUTTON_NEUTRAL);
+
+            btnLogin.setOnClickListener(v -> {
+                String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
+                String pass = etPass.getText() != null ? etPass.getText().toString().trim() : "";
+                if (email.isEmpty() || !email.contains("@")) {
+                    etEmail.setError("সঠিক ইমেইল লিখুন");
+                    return;
+                }
+                if (pass.length() < 6) {
+                    etPass.setError("কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন");
+                    return;
+                }
+                dialog.dismiss();
+                ProgressDialog progress = new ProgressDialog(MainActivity.this);
+                progress.setMessage("লগইন হচ্ছে...");
+                progress.setCancelable(false);
+                progress.show();
+
+                authManager.signInWithEmail(email, pass, new SupabaseAuthManager.AuthCallback() {
+                    @Override
+                    public void onSuccess(SupabaseAuthManager.AuthSession session) {
+                        runOnUiThread(() -> {
+                            progress.dismiss();
+                            updateSupabaseSyncCardUI();
+                            updateHeaderSyncStatusUI();
+                            Toast.makeText(MainActivity.this, "✅ লগইন সফল হয়েছে!", Toast.LENGTH_SHORT).show();
+                            performSupabaseManualSync();
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        runOnUiThread(() -> {
+                            progress.dismiss();
+                            new MaterialAlertDialogBuilder(MainActivity.this)
+                                    .setTitle("লগইন ব্যর্থ")
+                                    .setMessage(error)
+                                    .setPositiveButton("ঠিক আছে", null)
+                                    .show();
+                        });
+                    }
+                });
+            });
+
+            btnRegister.setOnClickListener(v -> {
+                String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
+                String pass = etPass.getText() != null ? etPass.getText().toString().trim() : "";
+                if (email.isEmpty() || !email.contains("@")) {
+                    etEmail.setError("সঠিক ইমেইল লিখুন");
+                    return;
+                }
+                if (pass.length() < 6) {
+                    etPass.setError("কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন");
+                    return;
+                }
+                dialog.dismiss();
+                ProgressDialog progress = new ProgressDialog(MainActivity.this);
+                progress.setMessage("অ্যাকাউন্ট তৈরি হচ্ছে...");
+                progress.setCancelable(false);
+                progress.show();
+
+                authManager.signUpWithEmail(email, pass, new SupabaseAuthManager.AuthCallback() {
+                    @Override
+                    public void onSuccess(SupabaseAuthManager.AuthSession session) {
+                        runOnUiThread(() -> {
+                            progress.dismiss();
+                            updateSupabaseSyncCardUI();
+                            updateHeaderSyncStatusUI();
+                            Toast.makeText(MainActivity.this, "✅ অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে!", Toast.LENGTH_SHORT).show();
+                            performSupabaseManualSync();
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        runOnUiThread(() -> {
+                            progress.dismiss();
+                            new MaterialAlertDialogBuilder(MainActivity.this)
+                                    .setTitle("অ্যাকাউন্ট তৈরি ব্যর্থ")
+                                    .setMessage(error)
+                                    .setPositiveButton("ঠিক আছে", null)
+                                    .show();
+                        });
+                    }
+                });
+            });
+        });
+
+        dialog.show();
+    }
+
+    private void showCloudSyncQuickDialog() {
+        SupabaseAuthManager authManager = SupabaseAuthManager.getInstance(this);
+        MawaSyncManager syncManager = MawaSyncManager.getInstance(this);
+        boolean loggedIn = authManager.isLoggedIn();
+
+        String title = loggedIn ? "☁️ ক্লাউড সিঙ্ক সক্রিয়" : "☁️ ক্লাউড সিঙ্ক স্ট্যাটাস";
+        String message = (loggedIn ? "অ্যাকাউন্ট: " + authManager.getUserEmail() + "\n" : "স্ট্যাটাস: অফলাইন (কোনো ক্লাউড অ্যাকাউন্ট লগইন নেই)\n")
+                + "সর্বশেষ সিঙ্ক: " + syncManager.getLastSyncTimeFormatted() + "\n\n"
+                + "এখনই ক্লাউডের সাথে আপনার হিসাব সিঙ্ক করতে চান?";
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("এখনই সিঙ্ক করুন", (dialog, which) -> {
+                    performSupabaseManualSync();
+                })
+                .setNeutralButton("ক্লাউড পেজে যান", (dialog, which) -> {
+                    if (this.binding != null && this.binding.tabLayout != null) {
+                        this.binding.tabLayout.selectTab(this.binding.tabLayout.getTabAt(4));
+                    }
+                })
+                .setNegativeButton("বন্ধ করুন", null)
+                .show();
+    }
+
+    private void setupHomeExpensesMoreCard() {
+        if (this.binding == null) return;
+        if (this.binding.btnAddHomeExpenseFromMore != null) {
+            this.binding.btnAddHomeExpenseFromMore.setOnClickListener(v -> showAddHomeExpenseDialog());
+        }
+        if (this.binding.btnViewHomeExpensesList != null) {
+            this.binding.btnViewHomeExpensesList.setOnClickListener(v -> showHomeExpenseListDialog());
+        }
+        updateHomeExpensesCardUI();
+    }
+
+    private void updateHomeExpensesCardUI() {
+        if (this.binding == null) return;
+        AccountingService accounting = AccountingService.getInstance(this);
+        AccountingService.MonthlyAccountingSummary mSummary = accounting.calculateCurrentMonthSummary();
+
+        if (this.binding.tvHomeExpenseMonthlySummary != null) {
+            this.binding.tvHomeExpenseMonthlySummary.setText("চলতি মাসের মোট সংসার খরচ: ৳ " + PdfExporter.formatBengaliNumber(mSummary.homeExpenses));
+        }
+    }
+
+    private void showAddHomeExpenseDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dpToPx(20), dpToPx(12), dpToPx(20), dpToPx(8));
+
+        TextView tvCategoryHint = new TextView(this);
+        tvCategoryHint.setText("ক্যাটাগরি বা খরচের ধরন বেছে নিন:");
+        tvCategoryHint.setTextColor(Color.parseColor("#475569"));
+        tvCategoryHint.setTextSize(12.0f);
+        tvCategoryHint.setPadding(0, 0, 0, dpToPx(4));
+        layout.addView(tvCategoryHint);
+
+        final Spinner spCategory = new Spinner(this);
+        final String[] categories = {
+            "🍲 বাজার ও খাবার খরচ",
+            "⚡ বিদ্যুৎ ও গ্যাস বিল",
+            "🏠 বাসা ভাড়া / ইউটিলিটি",
+            "💊 ওষুধ ও চিকিৎসা খরচ",
+            "📚 সন্তান ও পড়াশোনা খরচ",
+            "👤 ব্যক্তিগত হাতখরচ",
+            "🎁 অন্যান্য পারিবারিক খরচ"
+        };
+        ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
+        spCategory.setAdapter(catAdapter);
+        LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(48));
+        spLp.setMargins(0, 0, 0, dpToPx(10));
+        spCategory.setLayoutParams(spLp);
+        layout.addView(spCategory);
+
+        final TextInputLayout tilName = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilName.setHint("খরচের বিবরণ / নাম (ঐচ্ছিক)");
+        tilName.setBoxStrokeColor(Color.parseColor("#7C3AED"));
+        final TextInputEditText etName = new TextInputEditText(this);
+        tilName.addView(etName);
+        layout.addView(tilName);
+
+        final TextInputLayout tilAmount = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilAmount.setHint("টাকার পরিমাণ (৳)");
+        tilAmount.setBoxStrokeColor(Color.parseColor("#7C3AED"));
+        LinearLayout.LayoutParams amtLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        amtLp.setMargins(0, dpToPx(8), 0, 0);
+        tilAmount.setLayoutParams(amtLp);
+        final TextInputEditText etAmount = new TextInputEditText(this);
+        etAmount.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        tilAmount.addView(etAmount);
+        layout.addView(tilAmount);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("🏠 নতুন সংসার / পারিবারিক খরচ")
+                .setView(layout)
+                .setPositiveButton("সংরক্ষণ", (dialog, which) -> {
+                    String amtStr = etAmount.getText() != null ? etAmount.getText().toString().trim() : "";
+                    if (amtStr.isEmpty()) {
+                        Toast.makeText(this, "টাকার পরিমাণ লিখুন!", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    try {
+                        double amt = Double.parseDouble(amtStr);
+                        if (amt <= 0) return;
+                        String selectedCat = categories[spCategory.getSelectedItemPosition()];
+                        String detail = etName.getText() != null ? etName.getText().toString().trim() : "";
+                        String finalName = detail.isEmpty() ? selectedCat : (selectedCat + " - " + detail);
+
+                        String dateKey = viewModel != null ? viewModel.getActiveDateKey() : new SimpleDateFormat("dd-MM-yyyy", Locale.US).format(new Date());
+                        String timeStr = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+                        String expId = UUID.randomUUID().toString();
+
+                        ExpenseModel exp = new ExpenseModel(expId, finalName, amt, dateKey, timeStr, ExpenseModel.TYPE_HOME, ExpenseModel.TYPE_HOME);
+                        StorageManager.getInstance(this).addExpense(exp);
+                        if (viewModel != null) {
+                            viewModel.loadSavedData();
+                        }
+                        updateHomeExpensesCardUI();
+                        updateDashboardUI();
+                        planAutoCloudBackup();
+                        Toast.makeText(this, "✅ সংসার খরচ সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "সঠিক টাকার অঙ্ক লিখুন", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("বাতিল", null)
+                .show();
+    }
+
+    private void showHomeExpenseListDialog() {
+        AccountingService accounting = AccountingService.getInstance(this);
+        List<ExpenseModel> homeExpenses = accounting.getHomeExpenses();
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(8));
+
+        double total = 0;
+        for (ExpenseModel exp : homeExpenses) {
+            total += exp.getAmount();
+        }
+
+        TextView tvSummary = new TextView(this);
+        tvSummary.setText("মোট সংসার খরচ: ৳ " + PdfExporter.formatBengaliNumber(total) + " (" + PdfExporter.toBengaliDigits(String.valueOf(homeExpenses.size())) + " টি হিসাব)");
+        tvSummary.setTextColor(Color.parseColor("#7C3AED"));
+        tvSummary.setTextSize(14.0f);
+        tvSummary.setTypeface(null, Typeface.BOLD);
+        tvSummary.setPadding(0, 0, 0, dpToPx(10));
+        root.addView(tvSummary);
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout listContainer = new LinearLayout(this);
+        listContainer.setOrientation(LinearLayout.VERTICAL);
+
+        if (homeExpenses.isEmpty()) {
+            TextView emptyTv = new TextView(this);
+            emptyTv.setText("কোনো সংসার খরচ এখনও যুক্ত করা হয়নি।\n'সংসার খরচ যোগ করুন' বাটনে ক্লিক করে খরচ যুক্ত করুন।");
+            emptyTv.setTextColor(Color.parseColor("#94A3B8"));
+            emptyTv.setTextSize(13.0f);
+            emptyTv.setGravity(Gravity.CENTER);
+            emptyTv.setPadding(0, dpToPx(20), 0, dpToPx(20));
+            listContainer.addView(emptyTv);
+        } else {
+            for (ExpenseModel exp : homeExpenses) {
+                MaterialCardView itemCard = new MaterialCardView(this);
+                itemCard.setRadius(dpToPx(10));
+                itemCard.setCardElevation(dpToPx(1));
+                itemCard.setCardBackgroundColor(Color.parseColor("#F5F3FF"));
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, dpToPx(8));
+                itemCard.setLayoutParams(lp);
+
+                LinearLayout itemRow = new LinearLayout(this);
+                itemRow.setOrientation(LinearLayout.HORIZONTAL);
+                itemRow.setGravity(Gravity.CENTER_VERTICAL);
+                itemRow.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+
+                LinearLayout textCol = new LinearLayout(this);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+                textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+                TextView tvName = new TextView(this);
+                tvName.setText(exp.getName());
+                tvName.setTextColor(Color.parseColor("#1E1B4B"));
+                tvName.setTextSize(13.0f);
+                tvName.setTypeface(null, Typeface.BOLD);
+                textCol.addView(tvName);
+
+                TextView tvMeta = new TextView(this);
+                tvMeta.setText((exp.getDate() != null ? exp.getDate() : "") + " • " + (exp.getTime() != null ? exp.getTime() : ""));
+                tvMeta.setTextColor(Color.parseColor("#6D28D9"));
+                tvMeta.setTextSize(11.0f);
+                textCol.addView(tvMeta);
+                itemRow.addView(textCol);
+
+                TextView tvAmt = new TextView(this);
+                tvAmt.setText("৳ " + PdfExporter.formatBengaliNumber(exp.getAmount()));
+                tvAmt.setTextColor(Color.parseColor("#7C3AED"));
+                tvAmt.setTextSize(14.0f);
+                tvAmt.setTypeface(null, Typeface.BOLD);
+                itemRow.addView(tvAmt);
+
+                itemCard.addView(itemRow);
+                listContainer.addView(itemCard);
+            }
+        }
+
+        scroll.addView(listContainer);
+        root.addView(scroll);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("🏠 সংসার ও পারিবারিক খরচের তালিকা")
+                .setView(root)
+                .setPositiveButton("নতুন খরচ যোগ", (dialog, which) -> showAddHomeExpenseDialog())
+                .setNegativeButton("বন্ধ করুন", null)
+                .show();
     }
 
     private void updateUserProfileHeader() {
@@ -2234,6 +2752,24 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onFailure(String error) {
+                }
+            });
+        }
+
+        SupabaseAuthManager authManager = SupabaseAuthManager.getInstance(this);
+        if (authManager.isAuthenticated()) {
+            MawaSyncManager.getInstance(this).triggerSync(new MawaSyncManager.SyncListener() {
+                @Override
+                public void onSyncStatusChanged(MawaSyncManager.SyncStatus status, String message) {
+                    runOnUiThread(() -> updateHeaderSyncStatusUI());
+                }
+
+                @Override
+                public void onSyncCompleted(boolean success, String summary) {
+                    runOnUiThread(() -> {
+                        updateSupabaseSyncCardUI();
+                        updateHeaderSyncStatusUI();
+                    });
                 }
             });
         }
@@ -3485,6 +4021,118 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {}
         });
+
+        // Setup Inline Direct Entry Bar (কোন পপআপ ছাড়াই লাইনে দাম ও পণ্য যোগ)
+        final String[] unitLabels = {"কেজি", "লিটার", "গ্রাম", "পিস", "প্যাকেট", "বক্স", "ডজন", "বস্তা", "মি.লি."};
+        final String[] unitCodes = {"kg", "liter", "gm", "piece", "packet", "box", "dozen", "sack", "ml"};
+        ArrayAdapter<String> unitAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, unitLabels);
+        this.binding.spFordiInlineUnit.setAdapter(unitAdapter);
+
+        final StorageManager storage = StorageManager.getInstance(this);
+        List<ProductModel> productMemoryList = storage.loadProductMemory();
+        List<String> suggestionNames = new ArrayList<>();
+        for (ProductModel p : productMemoryList) {
+            suggestionNames.add(p.getName());
+        }
+        ArrayAdapter<String> suggestAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, suggestionNames);
+        this.binding.etFordiInlineProductName.setAdapter(suggestAdapter);
+
+        this.binding.etFordiInlineProductName.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedName = (String) parent.getItemAtPosition(position);
+                ProductModel matched = storage.findProductByName(selectedName);
+                if (matched != null) {
+                    if (matched.getLastPurchasePrice() > 0) {
+                        binding.etFordiInlineBuyRate.setText(String.format(Locale.US, "%.0f", matched.getLastPurchasePrice()));
+                    }
+                    if (matched.getSellingPrice() > 0) {
+                        binding.etFordiInlineSellRate.setText(String.format(Locale.US, "%.0f", matched.getSellingPrice()));
+                    }
+                    String u = matched.getUnit();
+                    for (int i = 0; i < unitCodes.length; i++) {
+                        if (unitCodes[i].equalsIgnoreCase(u)) {
+                            binding.spFordiInlineUnit.setSelection(i);
+                            break;
+                        }
+                    }
+                    binding.etFordiInlineQty.requestFocus();
+                    binding.etFordiInlineQty.selectAll();
+                }
+            }
+        });
+
+        this.binding.btnFordiInlineAdd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String name = binding.etFordiInlineProductName.getText().toString().trim();
+                if (name.isEmpty()) {
+                    binding.etFordiInlineProductName.setError("পণ্যের নাম লিখুন");
+                    binding.etFordiInlineProductName.requestFocus();
+                    return;
+                }
+
+                double qty = 1.0;
+                String qStr = binding.etFordiInlineQty.getText().toString().trim();
+                if (!qStr.isEmpty()) {
+                    try { qty = Double.parseDouble(qStr); } catch (Exception ignored) {}
+                }
+                if (qty <= 0) qty = 1.0;
+
+                int selectedUnitIdx = binding.spFordiInlineUnit.getSelectedItemPosition();
+                String unit = selectedUnitIdx >= 0 && selectedUnitIdx < unitCodes.length ? unitCodes[selectedUnitIdx] : "kg";
+
+                double pRate = 0.0;
+                String pStr = binding.etFordiInlineBuyRate.getText().toString().trim();
+                if (!pStr.isEmpty()) {
+                    try { pRate = Double.parseDouble(pStr); } catch (Exception ignored) {}
+                }
+
+                double sRate = 0.0;
+                String sStr = binding.etFordiInlineSellRate.getText().toString().trim();
+                if (!sStr.isEmpty()) {
+                    try { sRate = Double.parseDouble(sStr); } catch (Exception ignored) {}
+                }
+
+                FordiModel active = getActiveFordi();
+                if (active != null) {
+                    FordiItemModel newItem = new FordiItemModel(null, name, unit, qty, pRate, sRate);
+                    active.getItems().add(newItem);
+                    saveActiveFordi(active);
+
+                    // Update memory
+                    ProductModel prod = storage.findProductByName(name);
+                    if (prod == null) {
+                        prod = new ProductModel(null, name, unit, pRate, sRate, "বাজার ফর্দ");
+                    } else {
+                        if (pRate > 0) prod.setLastPurchasePrice(pRate);
+                        if (sRate > 0) prod.setSellingPrice(sRate);
+                        prod.setUnit(unit);
+                    }
+                    storage.saveOrUpdateProduct(prod);
+
+                    // Clear inputs for fast subsequent entry
+                    binding.etFordiInlineProductName.setText("");
+                    binding.etFordiInlineQty.setText("1");
+                    binding.etFordiInlineBuyRate.setText("");
+                    binding.etFordiInlineSellRate.setText("");
+                    binding.etFordiInlineProductName.requestFocus();
+                    Toast.makeText(MainActivity.this, "✓ " + name + " যোগ হয়েছে", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        this.binding.etFordiInlineSellRate.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                    binding.btnFordiInlineAdd.performClick();
+                    return true;
+                }
+                return false;
+            }
+        });
+
         this.binding.btnCreateFordi.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -3496,12 +4144,160 @@ public class MainActivity extends AppCompatActivity {
                 List<FordiModel> allFordi = storage.loadFordiRecords();
                 allFordi.add(0, newFordi);
                 storage.saveFordiRecords(allFordi);
+                MainActivity.this.currentActiveFordiId = newFordi.getId();
                 updateFordiKhataUI();
                 triggerAutoCloudBackup();
-                showFordiDetailDialog(newFordi);
+                binding.etFordiInlineProductName.requestFocus();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(binding.etFordiInlineProductName, InputMethodManager.SHOW_IMPLICIT);
+                }
             }
         });
+
+        this.binding.btnQuickAddFordiItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.etFordiInlineProductName.requestFocus();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(binding.etFordiInlineProductName, InputMethodManager.SHOW_IMPLICIT);
+                }
+            }
+        });
+
+        this.binding.btnEmptyStateAddFordiItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.etFordiInlineProductName.requestFocus();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(binding.etFordiInlineProductName, InputMethodManager.SHOW_IMPLICIT);
+                }
+            }
+        });
+
+        this.binding.btnFordiPostToAccounting.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final FordiModel active = getActiveFordi();
+                if (active == null) return;
+                if (active.isPostedToAccounting()) {
+                    Toast.makeText(MainActivity.this, "এই ফর্দটি আগেই হিসাবভুক্ত করা হয়েছে!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                double actualTotal = active.getActualTotal();
+                if (actualTotal <= 0 && active.getPlannedTotal() > 0) {
+                    new MaterialAlertDialogBuilder(MainActivity.this)
+                            .setTitle("🛒 সব পণ্য কেনা নিশ্চিত করুন")
+                            .setMessage("আপনি কি ফর্দের সব পণ্য পরিকল্পিত মূল্যে কেনা হিসেবে দৈনিক খরচের খাতায় যোগ করতে চান? (মোট ৳" + PdfExporter.formatBengaliNumber(active.getPlannedTotal()) + ")")
+                            .setPositiveButton("হ্যাঁ, সব কিনুন ও যোগ করুন", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    for (FordiItemModel item : active.getItems()) {
+                                        item.setChecked(true);
+                                    }
+                                    saveActiveFordi(active);
+                                    confirmAndPostToAccounting(active, null, null);
+                                }
+                            })
+                            .setNegativeButton("বাতিল", null)
+                            .show();
+                    return;
+                }
+                confirmAndPostToAccounting(active, null, null);
+            }
+        });
+
+        this.binding.btnFordiShareTable.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                FordiModel active = getActiveFordi();
+                if (active != null) {
+                    shareFordiList(active);
+                }
+            }
+        });
+
         updateFordiKhataUI();
+    }
+
+    private FordiModel getActiveFordi() {
+        StorageManager storage = StorageManager.getInstance(this);
+        List<FordiModel> allFordi = storage.loadFordiRecords();
+        if (allFordi.isEmpty()) {
+            String dateStr = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+            String banglaDate = new SimpleDateFormat("dd MMMM", new Locale("bn", "BD")).format(new Date());
+            FordiModel initial = new FordiModel(UUID.randomUUID().toString(), banglaDate + " বাজার ফর্দ", dateStr, new ArrayList<>(), "#F0FDFA");
+            allFordi.add(initial);
+            storage.saveFordiRecords(allFordi);
+            this.currentActiveFordiId = initial.getId();
+            return initial;
+        }
+        if (this.currentActiveFordiId != null) {
+            for (FordiModel f : allFordi) {
+                if (f.getId().equals(this.currentActiveFordiId)) {
+                    return f;
+                }
+            }
+        }
+        FordiModel first = allFordi.get(0);
+        this.currentActiveFordiId = first.getId();
+        return first;
+    }
+
+    private void saveActiveFordi(FordiModel updatedFordi) {
+        StorageManager storage = StorageManager.getInstance(this);
+        List<FordiModel> allFordi = storage.loadFordiRecords();
+        for (int i = 0; i < allFordi.size(); i++) {
+            if (allFordi.get(i).getId().equals(updatedFordi.getId())) {
+                allFordi.set(i, updatedFordi);
+                break;
+            }
+        }
+        storage.saveFordiRecords(allFordi);
+        updateFordiKhataUI();
+        triggerAutoCloudBackup();
+    }
+
+    private void refreshFordiGrandTotals(FordiModel activeFordi) {
+        if (activeFordi == null || this.binding == null) return;
+        double plannedSum = activeFordi.getPlannedTotal();
+        double profitSum = activeFordi.getPotentialProfit();
+        this.binding.tvFordiItemSummaryCount.setText(toBengaliDigits(String.valueOf(activeFordi.getItems().size())) + "টি পণ্য");
+        if (profitSum > 0) {
+            this.binding.tvFordiTableProfitPreview.setVisibility(View.VISIBLE);
+            this.binding.tvFordiTableProfitPreview.setText("সম্ভাব্য লাভ: ৳ " + PdfExporter.formatBengaliNumber(profitSum));
+        } else {
+            this.binding.tvFordiTableProfitPreview.setVisibility(View.GONE);
+        }
+        this.binding.tvFordiTableGrandTotal.setText("মোট ৳ " + PdfExporter.formatBengaliNumber(plannedSum));
+
+        if (activeFordi.isPostedToAccounting()) {
+            this.binding.btnFordiPostToAccounting.setText("✓ আজকের হিসাবে যোগ হয়েছে");
+            this.binding.btnFordiPostToAccounting.setEnabled(false);
+            this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#D1FAE5")));
+            this.binding.btnFordiPostToAccounting.setTextColor(Color.parseColor("#065F46"));
+        } else {
+            double actualCost = activeFordi.getActualTotal();
+            double costToShow = actualCost > 0 ? actualCost : plannedSum;
+            this.binding.btnFordiPostToAccounting.setText("🛒 হিসাবে যোগ করুন (৳ " + PdfExporter.formatBengaliNumber(costToShow) + ")");
+            this.binding.btnFordiPostToAccounting.setEnabled(true);
+            this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCFBF1")));
+            this.binding.btnFordiPostToAccounting.setTextColor(Color.parseColor("#0D9488"));
+        }
+
+        // Quietly update storage records without resetting view hierarchies
+        StorageManager storage = StorageManager.getInstance(this);
+        List<FordiModel> allFordi = storage.loadFordiRecords();
+        for (int i = 0; i < allFordi.size(); i++) {
+            if (allFordi.get(i).getId().equals(activeFordi.getId())) {
+                allFordi.set(i, activeFordi);
+                break;
+            }
+        }
+        storage.saveFordiRecords(allFordi);
+        triggerAutoCloudBackup();
     }
 
     public void updateFordiKhataUI() {
@@ -3510,439 +4306,494 @@ public class MainActivity extends AppCompatActivity {
         }
         StorageManager storage = StorageManager.getInstance(this);
         List<FordiModel> allFordi = storage.loadFordiRecords();
-        double totalPlanned = 0.0d;
-        double totalActual = 0.0d;
-        for (FordiModel f : allFordi) {
-            totalPlanned += f.getPlannedTotal();
-            totalActual += f.getActualTotal();
+        if (allFordi.isEmpty()) {
+            String dateStr = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+            String banglaDate = new SimpleDateFormat("dd MMMM", new Locale("bn", "BD")).format(new Date());
+            FordiModel initial = new FordiModel(UUID.randomUUID().toString(), banglaDate + " বাজার ফর্দ", dateStr, new ArrayList<>(), "#F0FDFA");
+            allFordi.add(initial);
+            storage.saveFordiRecords(allFordi);
         }
-        this.binding.tvTotalFordiCount.setText(toBengaliDigits(String.valueOf(allFordi.size())) + " টি");
-        this.binding.tvTotalFordiBudget.setText("৳ " + PdfExporter.formatBengaliNumber(totalPlanned));
-        String query = this.binding.etFordiSearch.getText().toString().trim().toLowerCase();
-        List<FordiModel> filteredList = new ArrayList<>();
-        for (FordiModel fordi : allFordi) {
-            boolean matchesTitle = fordi.getTitle().toLowerCase().contains(query);
-            boolean matchesItems = false;
-            for (FordiItemModel item2 : fordi.getItems()) {
-                if (item2.getProductName().toLowerCase().contains(query)) {
-                    matchesItems = true;
+
+        FordiModel activeFordi = null;
+        if (this.currentActiveFordiId != null) {
+            for (FordiModel f : allFordi) {
+                if (f.getId().equals(this.currentActiveFordiId)) {
+                    activeFordi = f;
                     break;
                 }
             }
-            if (matchesTitle || matchesItems) {
-                filteredList.add(fordi);
+        }
+        if (activeFordi == null) {
+            activeFordi = allFordi.get(0);
+            this.currentActiveFordiId = activeFordi.getId();
+        }
+
+        double totalAllPlanned = 0.0d;
+        for (FordiModel f : allFordi) {
+            totalAllPlanned += f.getPlannedTotal();
+        }
+        this.binding.tvTotalFordiCount.setText(toBengaliDigits(String.valueOf(allFordi.size())) + " টি");
+        this.binding.tvTotalFordiBudget.setText("৳ " + PdfExporter.formatBengaliNumber(totalAllPlanned));
+
+        // Update Header of Main Table Card
+        this.binding.tvFordiMainTitle.setText("ফর্দ");
+        this.binding.tvFordiMainDateSubtitle.setText(activeFordi.getTitle() + " • " + activeFordi.getDate());
+
+        // Populate Table Rows for Active Fordi
+        String query = this.binding.etFordiSearch.getText().toString().trim().toLowerCase();
+        List<FordiItemModel> displayItems = new ArrayList<>();
+        for (FordiItemModel item : activeFordi.getItems()) {
+            if (query.isEmpty() || item.getProductName().toLowerCase().contains(query)) {
+                displayItems.add(item);
             }
         }
-        populateFordiGrid(filteredList);
+
+        this.binding.layoutFordiTableRows.removeAllViews();
+        if (displayItems.isEmpty()) {
+            this.binding.layoutFordiEmptyState.setVisibility(View.VISIBLE);
+            this.binding.layoutFordiTableRows.setVisibility(View.GONE);
+        } else {
+            this.binding.layoutFordiEmptyState.setVisibility(View.GONE);
+            this.binding.layoutFordiTableRows.setVisibility(View.VISIBLE);
+
+            final FordiModel finalActiveFordi = activeFordi;
+
+            for (int i = 0; i < displayItems.size(); i++) {
+                final FordiItemModel item = displayItems.get(i);
+
+                LinearLayout rowLayout = new LinearLayout(this);
+                rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+                rowLayout.setGravity(Gravity.CENTER_VERTICAL);
+                rowLayout.setWeightSum(5.3f);
+                rowLayout.setMinimumHeight(dpToPx(44));
+                rowLayout.setPadding(dpToPx(4), dpToPx(6), dpToPx(4), dpToPx(6));
+
+                // Col 1: Product Name & Unit (Weight 1.3)
+                LinearLayout colProduct = new LinearLayout(this);
+                colProduct.setOrientation(LinearLayout.HORIZONTAL);
+                colProduct.setGravity(Gravity.CENTER_VERTICAL);
+                LinearLayout.LayoutParams colProductParams = new LinearLayout.LayoutParams(0, -2, 1.3f);
+                colProduct.setLayoutParams(colProductParams);
+
+                CheckBox cbItem = new CheckBox(this);
+                cbItem.setChecked(item.isChecked());
+                cbItem.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#7C3AED")));
+                LinearLayout.LayoutParams cbParams = new LinearLayout.LayoutParams(dpToPx(28), dpToPx(28));
+                cbParams.setMarginEnd(dpToPx(2));
+                cbItem.setLayoutParams(cbParams);
+
+                final TextView tvName = new TextView(this);
+                LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, -2, 1.0f);
+                tvName.setLayoutParams(nameParams);
+                String uLabel = "(" + ProductModel.getBengaliUnitLabel(item.getUnit()) + ")";
+                tvName.setText(item.getProductName() + " " + uLabel);
+                tvName.setTextSize(12.0f);
+                tvName.setSingleLine(true);
+                tvName.setEllipsize(TextUtils.TruncateAt.END);
+                if (item.isChecked()) {
+                    tvName.setPaintFlags(tvName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                    tvName.setTextColor(Color.parseColor("#94A3B8"));
+                } else {
+                    tvName.setTextColor(Color.parseColor("#0F172A"));
+                }
+
+                colProduct.addView(cbItem);
+                colProduct.addView(tvName);
+                rowLayout.addView(colProduct);
+
+                // Col 2: Direct Inline Quantity (Weight 0.85)
+                final EditText etQty = new EditText(this);
+                LinearLayout.LayoutParams qtyParams = new LinearLayout.LayoutParams(0, dpToPx(34), 0.85f);
+                qtyParams.setMarginEnd(dpToPx(3));
+                etQty.setLayoutParams(qtyParams);
+                etQty.setBackgroundResource(R.drawable.bg_fordi_cell_input);
+                etQty.setGravity(Gravity.CENTER);
+                etQty.setTextSize(11.5f);
+                etQty.setSingleLine(true);
+                etQty.setTextColor(Color.parseColor("#0F172A"));
+                etQty.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                etQty.setText(item.getPlannedQuantity() > 0 ? (item.getPlannedQuantity() == (long) item.getPlannedQuantity() ? String.format(Locale.US, "%d", (long) item.getPlannedQuantity()) : String.format(Locale.US, "%.1f", item.getPlannedQuantity())) : "1");
+                rowLayout.addView(etQty);
+
+                // Col 3: Direct Inline Purchase Rate (Weight 1.0)
+                final EditText etBuyRate = new EditText(this);
+                LinearLayout.LayoutParams buyParams = new LinearLayout.LayoutParams(0, dpToPx(34), 1.0f);
+                buyParams.setMarginEnd(dpToPx(3));
+                etBuyRate.setLayoutParams(buyParams);
+                etBuyRate.setBackgroundResource(R.drawable.bg_fordi_cell_input);
+                etBuyRate.setGravity(Gravity.CENTER);
+                etBuyRate.setTextSize(11.5f);
+                etBuyRate.setSingleLine(true);
+                etBuyRate.setHint("০");
+                etBuyRate.setTextColor(Color.parseColor("#0F172A"));
+                etBuyRate.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                if (item.getPurchaseRate() > 0) {
+                    etBuyRate.setText(item.getPurchaseRate() == (long) item.getPurchaseRate() ? String.format(Locale.US, "%d", (long) item.getPurchaseRate()) : String.format(Locale.US, "%.1f", item.getPurchaseRate()));
+                }
+                rowLayout.addView(etBuyRate);
+
+                // Col 4: Direct Inline Selling Rate (Weight 1.0)
+                final EditText etSellRate = new EditText(this);
+                LinearLayout.LayoutParams sellParams = new LinearLayout.LayoutParams(0, dpToPx(34), 1.0f);
+                sellParams.setMarginEnd(dpToPx(3));
+                etSellRate.setLayoutParams(sellParams);
+                etSellRate.setBackgroundResource(R.drawable.bg_fordi_cell_input);
+                etSellRate.setGravity(Gravity.CENTER);
+                etSellRate.setTextSize(11.5f);
+                etSellRate.setSingleLine(true);
+                etSellRate.setHint("০");
+                etSellRate.setTextColor(Color.parseColor("#0F172A"));
+                etSellRate.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                if (item.getSellingRate() > 0) {
+                    etSellRate.setText(item.getSellingRate() == (long) item.getSellingRate() ? String.format(Locale.US, "%d", (long) item.getSellingRate()) : String.format(Locale.US, "%.1f", item.getSellingRate()));
+                }
+                rowLayout.addView(etSellRate);
+
+                // Col 5: Total (Weight 0.85, End, Bold)
+                final TextView tvTotal = new TextView(this);
+                LinearLayout.LayoutParams totalParams = new LinearLayout.LayoutParams(0, -2, 0.85f);
+                tvTotal.setLayoutParams(totalParams);
+                tvTotal.setGravity(Gravity.END);
+                tvTotal.setTextSize(12.0f);
+                tvTotal.setTypeface(null, Typeface.BOLD);
+                tvTotal.setSingleLine(true);
+                tvTotal.setTextColor(Color.parseColor(item.isChecked() ? "#059669" : "#0F172A"));
+                tvTotal.setText("৳" + PdfExporter.formatBengaliNumber(item.getPlannedTotal()));
+                rowLayout.addView(tvTotal);
+
+                // Col 6: Delete Button (Weight 0.3)
+                ImageView ivDelete = new ImageView(this);
+                LinearLayout.LayoutParams delParams = new LinearLayout.LayoutParams(0, dpToPx(24), 0.3f);
+                ivDelete.setLayoutParams(delParams);
+                ivDelete.setImageResource(R.drawable.ic_trash);
+                ivDelete.setImageTintList(ColorStateList.valueOf(Color.parseColor("#94A3B8")));
+                ivDelete.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+                ivDelete.setClickable(true);
+                ivDelete.setFocusable(true);
+                rowLayout.addView(ivDelete);
+
+                // Live Listeners for Direct Inline Updates
+                cbItem.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        item.setChecked(isChecked);
+                        if (isChecked) {
+                            tvName.setPaintFlags(tvName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                            tvName.setTextColor(Color.parseColor("#94A3B8"));
+                            tvTotal.setTextColor(Color.parseColor("#059669"));
+                        } else {
+                            tvName.setPaintFlags(tvName.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+                            tvName.setTextColor(Color.parseColor("#0F172A"));
+                            tvTotal.setTextColor(Color.parseColor("#0F172A"));
+                        }
+                        refreshFordiGrandTotals(finalActiveFordi);
+                    }
+                });
+
+                TextWatcher inlineWatcher = new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                        double q = 1.0;
+                        String qStr = etQty.getText().toString().trim();
+                        if (!qStr.isEmpty()) {
+                            try { q = Double.parseDouble(qStr); } catch (Exception ignored) {}
+                        }
+                        if (q <= 0) q = 1.0;
+
+                        double pr = 0.0;
+                        String prStr = etBuyRate.getText().toString().trim();
+                        if (!prStr.isEmpty()) {
+                            try { pr = Double.parseDouble(prStr); } catch (Exception ignored) {}
+                        }
+
+                        double sr = 0.0;
+                        String srStr = etSellRate.getText().toString().trim();
+                        if (!srStr.isEmpty()) {
+                            try { sr = Double.parseDouble(srStr); } catch (Exception ignored) {}
+                        }
+
+                        item.setPlannedQuantity(q);
+                        item.setActualQuantity(q);
+                        item.setPurchaseRate(pr);
+                        item.setActualPurchaseRate(pr);
+                        item.setSellingRate(sr);
+                        item.recalculate();
+
+                        tvTotal.setText("৳" + PdfExporter.formatBengaliNumber(item.getPlannedTotal()));
+                        refreshFordiGrandTotals(finalActiveFordi);
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {}
+                };
+
+                etQty.addTextChangedListener(inlineWatcher);
+                etBuyRate.addTextChangedListener(inlineWatcher);
+                etSellRate.addTextChangedListener(inlineWatcher);
+
+                // Save product memory when focus leaves purchase or sell rates
+                View.OnFocusChangeListener rateFocusListener = new View.OnFocusChangeListener() {
+                    @Override
+                    public void onFocusChange(View v, boolean hasFocus) {
+                        if (!hasFocus) {
+                            double pr = item.getPurchaseRate();
+                            double sr = item.getSellingRate();
+                            if (pr > 0 || sr > 0) {
+                                StorageManager storage = StorageManager.getInstance(MainActivity.this);
+                                ProductModel prod = storage.findProductByName(item.getProductName());
+                                if (prod != null) {
+                                    if (pr > 0) prod.setLastPurchasePrice(pr);
+                                    if (sr > 0) prod.setSellingPrice(sr);
+                                    storage.saveOrUpdateProduct(prod);
+                                }
+                            }
+                        }
+                    }
+                };
+                etBuyRate.setOnFocusChangeListener(rateFocusListener);
+                etSellRate.setOnFocusChangeListener(rateFocusListener);
+
+                ivDelete.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        finalActiveFordi.getItems().remove(item);
+                        saveActiveFordi(finalActiveFordi);
+                        Toast.makeText(MainActivity.this, "🗑️ " + item.getProductName() + " মোছা হয়েছে", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+                this.binding.layoutFordiTableRows.addView(rowLayout);
+
+                // Divider line between rows
+                if (i < displayItems.size() - 1) {
+                    View divider = new View(this);
+                    LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(-1, dpToPx(1));
+                    divider.setLayoutParams(divParams);
+                    divider.setBackgroundColor(Color.parseColor("#F1F5F9"));
+                    this.binding.layoutFordiTableRows.addView(divider);
+                }
+            }
+        }
+
+        // Summary Row Updates
+        double plannedSum = activeFordi.getPlannedTotal();
+        double profitSum = activeFordi.getPotentialProfit();
+        this.binding.tvFordiItemSummaryCount.setText(toBengaliDigits(String.valueOf(activeFordi.getItems().size())) + "টি পণ্য");
+        if (profitSum > 0) {
+            this.binding.tvFordiTableProfitPreview.setVisibility(View.VISIBLE);
+            this.binding.tvFordiTableProfitPreview.setText("সম্ভাব্য লাভ: ৳ " + PdfExporter.formatBengaliNumber(profitSum));
+        } else {
+            this.binding.tvFordiTableProfitPreview.setVisibility(View.GONE);
+        }
+        this.binding.tvFordiTableGrandTotal.setText("মোট ৳ " + PdfExporter.formatBengaliNumber(plannedSum));
+
+        // Action Button state
+        if (activeFordi.isPostedToAccounting()) {
+            this.binding.btnFordiPostToAccounting.setText("✓ আজকের হিসাবে যোগ হয়েছে");
+            this.binding.btnFordiPostToAccounting.setEnabled(false);
+            this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#D1FAE5")));
+            this.binding.btnFordiPostToAccounting.setTextColor(Color.parseColor("#065F46"));
+        } else {
+            double actualCost = activeFordi.getActualTotal();
+            double costToShow = actualCost > 0 ? actualCost : plannedSum;
+            this.binding.btnFordiPostToAccounting.setText("🛒 হিসাবে যোগ করুন (৳ " + PdfExporter.formatBengaliNumber(costToShow) + ")");
+            this.binding.btnFordiPostToAccounting.setEnabled(true);
+            this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCFBF1")));
+            this.binding.btnFordiPostToAccounting.setTextColor(Color.parseColor("#0D9488"));
+        }
+
+        // Populate Other Saved Fordis below main card
+        populateSavedFordiList(allFordi, activeFordi.getId());
     }
 
-    private void populateFordiGrid(List<FordiModel> list) {
+    private void populateSavedFordiList(List<FordiModel> allFordi, String activeId) {
         this.binding.layoutFordiList.removeAllViews();
-        if (list.isEmpty()) {
-            this.binding.layoutFordiEmptyState.setVisibility(View.VISIBLE);
-            this.binding.layoutFordiList.setVisibility(View.GONE);
+        if (allFordi.size() <= 1) {
             return;
         }
-        this.binding.layoutFordiEmptyState.setVisibility(View.GONE);
-        this.binding.layoutFordiList.setVisibility(View.VISIBLE);
 
-        for (final FordiModel fordi : list) {
+        TextView headerOther = new TextView(this);
+        headerOther.setText("📁 সংরক্ষিত অন্যান্য ফর্দ (" + toBengaliDigits(String.valueOf(allFordi.size() - 1)) + "টি)");
+        headerOther.setTextSize(13.0f);
+        headerOther.setTypeface(null, Typeface.BOLD);
+        headerOther.setTextColor(Color.parseColor("#475569"));
+        headerOther.setPadding(dpToPx(4), dpToPx(12), dpToPx(4), dpToPx(8));
+        this.binding.layoutFordiList.addView(headerOther);
+
+        for (final FordiModel fordi : allFordi) {
+            if (fordi.getId().equals(activeId)) continue;
+
             MaterialCardView card = new MaterialCardView(this);
             LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
-            cardParams.setMargins(0, 0, 0, dpToPx(16));
+            cardParams.setMargins(0, 0, 0, dpToPx(10));
             card.setLayoutParams(cardParams);
-            card.setRadius(dpToPx(20));
-            card.setCardElevation(dpToPx(2));
+            card.setRadius(dpToPx(14));
+            card.setCardElevation(dpToPx(1));
             card.setStrokeWidth(dpToPx(1));
-            card.setStrokeColor(Color.parseColor(fordi.isPostedToAccounting() ? "#A7F3D0" : "#E2E8F0"));
-            String bgHex = fordi.getColorHex() != null ? fordi.getColorHex() : "#F8FAFC";
-            card.setCardBackgroundColor(Color.parseColor(bgHex));
-            card.setContentPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+            card.setStrokeColor(Color.parseColor("#E2E8F0"));
+            card.setCardBackgroundColor(Color.parseColor("#FFFFFF"));
+            card.setContentPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
 
             LinearLayout root = new LinearLayout(this);
-            root.setOrientation(LinearLayout.VERTICAL);
+            root.setOrientation(LinearLayout.HORIZONTAL);
+            root.setGravity(Gravity.CENTER_VERTICAL);
 
-            // Header row
-            LinearLayout headerRow = new LinearLayout(this);
-            headerRow.setOrientation(LinearLayout.HORIZONTAL);
-            headerRow.setGravity(Gravity.CENTER_VERTICAL);
+            LinearLayout info = new LinearLayout(this);
+            info.setOrientation(LinearLayout.VERTICAL);
+            info.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
 
-            LinearLayout titleLayout = new LinearLayout(this);
-            titleLayout.setOrientation(LinearLayout.VERTICAL);
-            titleLayout.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
+            TextView tvTitle = new TextView(this);
+            tvTitle.setText(fordi.getTitle());
+            tvTitle.setTextSize(14.0f);
+            tvTitle.setTypeface(null, Typeface.BOLD);
+            tvTitle.setTextColor(Color.parseColor("#0F172A"));
+            info.addView(tvTitle);
 
-            TextView txtTitle = new TextView(this);
-            txtTitle.setText(fordi.getTitle());
-            txtTitle.setTextSize(15.0f);
-            txtTitle.setTypeface(null, Typeface.BOLD);
-            txtTitle.setTextColor(Color.parseColor("#0F172A"));
-            titleLayout.addView(txtTitle);
+            TextView tvSub = new TextView(this);
+            tvSub.setText("📅 " + fordi.getDate() + " • " + toBengaliDigits(String.valueOf(fordi.getItems().size())) + "টি পণ্য • মোট ৳" + PdfExporter.formatBengaliNumber(fordi.getPlannedTotal()));
+            tvSub.setTextSize(11.0f);
+            tvSub.setTextColor(Color.parseColor("#64748B"));
+            info.addView(tvSub);
+            root.addView(info);
 
-            TextView txtDate = new TextView(this);
-            txtDate.setText("📅 " + fordi.getDate());
-            txtDate.setTextSize(11.0f);
-            txtDate.setTextColor(Color.parseColor("#64748B"));
-            txtDate.setPadding(0, dpToPx(2), 0, 0);
-            titleLayout.addView(txtDate);
-            headerRow.addView(titleLayout);
-
-            // Status Badge
-            TextView txtStatus = new TextView(this);
-            txtStatus.setTextSize(11.0f);
-            txtStatus.setTypeface(null, Typeface.BOLD);
-            txtStatus.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
-            GradientDrawable statusPill = new GradientDrawable();
-            statusPill.setShape(GradientDrawable.RECTANGLE);
-            statusPill.setCornerRadius(dpToPx(10));
-
-            if (fordi.isPostedToAccounting()) {
-                txtStatus.setText("✓ হিসাবে যুক্ত");
-                txtStatus.setTextColor(Color.parseColor("#065F46"));
-                statusPill.setColor(Color.parseColor("#D1FAE5"));
-            } else {
-                int totalCount = fordi.getTotalItemCount();
-                int boughtCount = fordi.getBoughtItemCount();
-                txtStatus.setText("কেনা: " + toBengaliDigits(String.valueOf(boughtCount)) + "/" + toBengaliDigits(String.valueOf(totalCount)));
-                txtStatus.setTextColor(Color.parseColor("#0F766E"));
-                statusPill.setColor(Color.parseColor("#CCFBF1"));
-            }
-            txtStatus.setBackground(statusPill);
-            headerRow.addView(txtStatus);
-            root.addView(headerRow);
-
-            // Divider
-            View divider = new View(this);
-            LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(-1, dpToPx(1));
-            divParams.setMargins(0, dpToPx(10), 0, dpToPx(10));
-            divider.setLayoutParams(divParams);
-            divider.setBackgroundColor(Color.parseColor("#E2E8F0"));
-            root.addView(divider);
-
-            // Item Preview Rows (Up to 4)
-            int totalItems = fordi.getItems().size();
-            int previewCount = Math.min(totalItems, 4);
-            if (previewCount == 0) {
-                TextView emptyPreview = new TextView(this);
-                emptyPreview.setText("ফর্দটি শূন্য। পণ্য যোগ করতে নিচে খুলুন চাপুন।");
-                emptyPreview.setTextSize(12.0f);
-                emptyPreview.setTextColor(Color.parseColor("#64748B"));
-                emptyPreview.setTypeface(null, Typeface.ITALIC);
-                root.addView(emptyPreview);
-            } else {
-                for (int i = 0; i < previewCount; i++) {
-                    FordiItemModel item = fordi.getItems().get(i);
-                    LinearLayout row = new LinearLayout(this);
-                    row.setOrientation(LinearLayout.HORIZONTAL);
-                    row.setGravity(Gravity.CENTER_VERTICAL);
-                    row.setPadding(0, dpToPx(2), 0, dpToPx(2));
-
-                    TextView bullet = new TextView(this);
-                    bullet.setText(item.isChecked() ? "☑️ " : "⬜ ");
-                    bullet.setTextSize(12.0f);
-                    row.addView(bullet);
-
-                    TextView nameView = new TextView(this);
-                    String qtyUnitStr = " (" + PdfExporter.formatBengaliNumber(item.getPlannedQuantity()) + " " + ProductModel.getBengaliUnitLabel(item.getUnit()) + ")";
-                    nameView.setText(item.getProductName() + qtyUnitStr);
-                    nameView.setTextSize(13.0f);
-                    nameView.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
-                    if (item.isChecked()) {
-                        nameView.setPaintFlags(nameView.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
-                        nameView.setTextColor(Color.parseColor("#94A3B8"));
-                    } else {
-                        nameView.setTextColor(Color.parseColor("#334155"));
-                    }
-                    row.addView(nameView);
-
-                    TextView priceView = new TextView(this);
-                    double cost = item.getPlannedTotal();
-                    priceView.setText("৳" + PdfExporter.formatBengaliNumber(cost));
-                    priceView.setTextSize(12.0f);
-                    priceView.setTypeface(null, Typeface.BOLD);
-                    priceView.setTextColor(Color.parseColor("#0D9488"));
-                    row.addView(priceView);
-
-                    root.addView(row);
-                }
-                if (totalItems > 4) {
-                    TextView moreView = new TextView(this);
-                    moreView.setText("+ আরো " + toBengaliDigits(String.valueOf(totalItems - 4)) + " টি পণ্য...");
-                    moreView.setTextSize(11.0f);
-                    moreView.setTextColor(Color.parseColor("#64748B"));
-                    moreView.setPadding(0, dpToPx(4), 0, 0);
-                    root.addView(moreView);
-                }
-            }
-
-            // Summary Info Row
-            LinearLayout summaryRow = new LinearLayout(this);
-            summaryRow.setOrientation(LinearLayout.HORIZONTAL);
-            summaryRow.setGravity(Gravity.CENTER_VERTICAL);
-            summaryRow.setPadding(0, dpToPx(10), 0, dpToPx(4));
-
-            TextView txtPlanned = new TextView(this);
-            txtPlanned.setText("পরিকল্পিত: ৳" + PdfExporter.formatBengaliNumber(fordi.getPlannedTotal()));
-            txtPlanned.setTextSize(12.0f);
-            txtPlanned.setTypeface(null, Typeface.BOLD);
-            txtPlanned.setTextColor(Color.parseColor("#0F766E"));
-            txtPlanned.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
-            summaryRow.addView(txtPlanned);
-
-            if (fordi.getPotentialProfit() > 0) {
-                TextView txtProfit = new TextView(this);
-                txtProfit.setText("সম্ভাব্য লাভ: ৳" + PdfExporter.formatBengaliNumber(fordi.getPotentialProfit()));
-                txtProfit.setTextSize(11.0f);
-                txtProfit.setTypeface(null, Typeface.BOLD);
-                txtProfit.setTextColor(Color.parseColor("#2563EB"));
-                summaryRow.addView(txtProfit);
-            }
-            root.addView(summaryRow);
-
-            // Action Buttons Row
-            LinearLayout btnRow = new LinearLayout(this);
-            btnRow.setOrientation(LinearLayout.HORIZONTAL);
-            btnRow.setGravity(Gravity.END);
-            LinearLayout.LayoutParams btnRowParams = new LinearLayout.LayoutParams(-1, -2);
-            btnRowParams.setMargins(0, dpToPx(10), 0, 0);
-            btnRow.setLayoutParams(btnRowParams);
-
-            MaterialButton btnEdit = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonStyle);
-            btnEdit.setText("স্মার্ট ফর্দ খুলুন / এডিট");
-            btnEdit.setTextSize(11.0f);
-            btnEdit.setPadding(dpToPx(12), 0, dpToPx(12), 0);
-            LinearLayout.LayoutParams btnEditParams = new LinearLayout.LayoutParams(-2, dpToPx(36));
-            btnEditParams.setMargins(0, 0, dpToPx(8), 0);
-            btnEdit.setLayoutParams(btnEditParams);
-            btnEdit.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#0D9488")));
-            btnEdit.setCornerRadius(dpToPx(8));
-            btnEdit.setOnClickListener(new View.OnClickListener() {
+            MaterialButton btnSwitch = new MaterialButton(this);
+            btnSwitch.setText("খুলুন");
+            btnSwitch.setTextSize(11.0f);
+            btnSwitch.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#F1F5F9")));
+            btnSwitch.setTextColor(Color.parseColor("#0F172A"));
+            btnSwitch.setCornerRadius(dpToPx(8));
+            btnSwitch.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View view) {
-                    showFordiDetailDialog(fordi);
+                public void onClick(View v) {
+                    MainActivity.this.currentActiveFordiId = fordi.getId();
+                    MainActivity.this.updateFordiKhataUI();
+                    Toast.makeText(MainActivity.this, "📋 '" + fordi.getTitle() + "' খোলা হয়েছে!", Toast.LENGTH_SHORT).show();
                 }
             });
-            btnRow.addView(btnEdit);
+            root.addView(btnSwitch);
 
-            MaterialButton btnDelete = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-            btnDelete.setText("");
-            LinearLayout.LayoutParams btnDeleteParams = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(36));
-            btnDelete.setLayoutParams(btnDeleteParams);
-            btnDelete.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#EF4444")));
-            btnDelete.setStrokeWidth(dpToPx(1));
-            btnDelete.setCornerRadius(dpToPx(8));
-            btnDelete.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_trash));
-            btnDelete.setIconSize(dpToPx(14));
-            btnDelete.setIconPadding(0);
-            btnDelete.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-            btnDelete.setIconTint(ColorStateList.valueOf(Color.parseColor("#EF4444")));
-            btnDelete.setOnClickListener(new View.OnClickListener() {
+            MaterialButton btnDel = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btnDel.setStrokeWidth(0);
+            LinearLayout.LayoutParams delParams = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(36));
+            delParams.setMargins(dpToPx(4), 0, 0, 0);
+            btnDel.setLayoutParams(delParams);
+            btnDel.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_trash));
+            btnDel.setIconSize(dpToPx(14));
+            btnDel.setIconPadding(0);
+            btnDel.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+            btnDel.setIconTint(ColorStateList.valueOf(Color.parseColor("#EF4444")));
+            btnDel.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View view) {
+                public void onClick(View v) {
                     deleteFordiRecord(fordi);
                 }
             });
-            btnRow.addView(btnDelete);
+            root.addView(btnDel);
 
-            root.addView(btnRow);
             card.addView(root);
             this.binding.layoutFordiList.addView(card);
         }
     }
 
-    private void showFordiDetailDialog(final FordiModel fordi) {
-        final Dialog dialog = new Dialog(this, android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);
-        final LinearLayout linearLayout = new LinearLayout(this);
-        linearLayout.setOrientation(LinearLayout.VERTICAL);
-        linearLayout.setFitsSystemWindows(true);
-        String colorHex = fordi.getColorHex() != null ? fordi.getColorHex() : "#F1F5F9";
-        linearLayout.setBackgroundColor(Color.parseColor(colorHex));
+    private void showAddFordiItemDialog(final FordiModel fordi) {
+        final StorageManager storage = StorageManager.getInstance(this);
+        LinearLayout dlgRoot = new LinearLayout(this);
+        dlgRoot.setOrientation(LinearLayout.VERTICAL);
+        dlgRoot.setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(16));
 
-        // Top AppBar
-        LinearLayout appBar = new LinearLayout(this);
-        appBar.setOrientation(LinearLayout.HORIZONTAL);
-        appBar.setGravity(Gravity.CENTER_VERTICAL);
-        appBar.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
-        appBar.setBackgroundColor(Color.parseColor("#FFFFFF"));
+        // AutoComplete Product Name
+        final TextInputLayout tilName = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilName.setHint("পণ্যের নাম (যেমন: চিনি, তেল, ডাল)");
+        tilName.setBoxStrokeColor(Color.parseColor("#7C3AED"));
+        tilName.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#7C3AED")));
+        final AutoCompleteTextView actName = new AutoCompleteTextView(this);
+        actName.setTextSize(14.0f);
+        actName.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        tilName.addView(actName);
+        dlgRoot.addView(tilName);
 
-        MaterialButton btnBack = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btnBack.setStrokeWidth(0);
-        btnBack.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40)));
-        btnBack.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_left_arrow));
-        btnBack.setIconSize(dpToPx(18));
-        btnBack.setIconPadding(0);
-        btnBack.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-        btnBack.setIconTint(ColorStateList.valueOf(Color.parseColor("#0F172A")));
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dialog.dismiss();
-                updateFordiKhataUI();
-            }
-        });
-        appBar.addView(btnBack);
-
-        TextInputLayout tilTitle = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
-        tilTitle.setHint("ফর্দ শিরোনাম");
-        tilTitle.setBoxStrokeColor(Color.parseColor("#0D9488"));
-        tilTitle.setHintTextColor(ColorStateList.valueOf(Color.parseColor("#0D9488")));
-        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, -2, 1.0f);
-        titleParams.setMargins(dpToPx(8), 0, dpToPx(8), 0);
-        tilTitle.setLayoutParams(titleParams);
-        TextInputEditText etTitleInput = new TextInputEditText(this);
-        etTitleInput.setText(fordi.getTitle());
-        etTitleInput.setTextSize(13.0f);
-        etTitleInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        tilTitle.addView(etTitleInput);
-        appBar.addView(tilTitle);
-
-        MaterialButton btnShare = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        btnShare.setStrokeWidth(0);
-        btnShare.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(38), dpToPx(38)));
-        btnShare.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_share));
-        btnShare.setIconSize(dpToPx(18));
-        btnShare.setIconPadding(0);
-        btnShare.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-        btnShare.setIconTint(ColorStateList.valueOf(Color.parseColor("#475569")));
-        btnShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                shareFordiList(fordi);
-            }
-        });
-        appBar.addView(btnShare);
-        linearLayout.addView(appBar);
-
-        // Smart Input Card (Product Memory AutoComplete + Rates)
-        LinearLayout inputCardWrapper = new LinearLayout(this);
-        inputCardWrapper.setOrientation(LinearLayout.VERTICAL);
-        inputCardWrapper.setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(8));
-
-        MaterialCardView inputCard = new MaterialCardView(this);
-        inputCard.setRadius(dpToPx(16));
-        inputCard.setCardElevation(dpToPx(2));
-        inputCard.setStrokeColor(Color.parseColor("#0D9488"));
-        inputCard.setStrokeWidth(dpToPx(1));
-        inputCard.setCardBackgroundColor(Color.parseColor("#FFFFFF"));
-
-        LinearLayout inputLayout = new LinearLayout(this);
-        inputLayout.setOrientation(LinearLayout.VERTICAL);
-        inputLayout.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
-
-        // Header label
-        TextView txtInputHeader = new TextView(this);
-        txtInputHeader.setText("⚡ স্মার্ট পণ্য যোগ ও দরদাম মেমোরি");
-        txtInputHeader.setTextSize(12.0f);
-        txtInputHeader.setTypeface(null, Typeface.BOLD);
-        txtInputHeader.setTextColor(Color.parseColor("#0D9488"));
-        txtInputHeader.setPadding(0, 0, 0, dpToPx(6));
-        inputLayout.addView(txtInputHeader);
-
-        // Row 1: Product Name AutoComplete
-        final TextInputLayout tilItemName = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
-        tilItemName.setHint("পণ্যের নাম (যেমন: চিনি, তেল, ডাল)");
-        tilItemName.setBoxStrokeColor(Color.parseColor("#0D9488"));
-        tilItemName.setLayoutParams(new LinearLayout.LayoutParams(-1, -2));
-        
-        final AutoCompleteTextView actItemName = new AutoCompleteTextView(this);
-        actItemName.setTextSize(13.0f);
-        actItemName.setThreshold(1);
-        tilItemName.addView(actItemName);
-        inputLayout.addView(tilItemName);
-
-        // Row 2: Quantity + Unit Spinner
-        LinearLayout row2 = new LinearLayout(this);
-        row2.setOrientation(LinearLayout.HORIZONTAL);
-        row2.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams row2Params = new LinearLayout.LayoutParams(-1, -2);
-        row2Params.setMargins(0, dpToPx(6), 0, 0);
-        row2.setLayoutParams(row2Params);
+        // Row Qty + Unit
+        LinearLayout rowQty = new LinearLayout(this);
+        rowQty.setOrientation(LinearLayout.HORIZONTAL);
+        rowQty.setPadding(0, dpToPx(8), 0, 0);
 
         final TextInputLayout tilQty = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
-        tilQty.setHint("পরিমাপ/পরিমাণ");
-        tilQty.setBoxStrokeColor(Color.parseColor("#0D9488"));
-        tilQty.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
+        tilQty.setHint("পরিমাণ");
+        tilQty.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.2f));
         final TextInputEditText etQty = new TextInputEditText(this);
-        etQty.setTextSize(13.0f);
         etQty.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         etQty.setText("1");
         tilQty.addView(etQty);
-        row2.addView(tilQty);
+        rowQty.addView(tilQty);
 
         final Spinner spinnerUnit = new Spinner(this);
-        String[] unitsBengali = {"কেজি (kg)", "লিটার (liter)", "গ্রাম (gram)", "পিস / টি (piece)", "প্যাকেট (packet)", "বক্স (box)", "ডজন (dozen)", "বস্তা (bag)", "মি.লি. (ml)"};
-        final String[] unitCodes = {ProductModel.UNIT_KG, ProductModel.UNIT_LITER, ProductModel.UNIT_GRAM, ProductModel.UNIT_PIECE, ProductModel.UNIT_PACKET, ProductModel.UNIT_BOX, ProductModel.UNIT_DOZEN, ProductModel.UNIT_BAG, ProductModel.UNIT_ML};
-        ArrayAdapter<String> unitAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, unitsBengali);
+        final String[] unitLabels = {"কেজি", "লিটার", "গ্রাম", "পিস", "প্যাকেট", "বক্স", "ডজন", "বস্তা", "মি.লি."};
+        final String[] unitCodes = {"kg", "liter", "gm", "piece", "packet", "box", "dozen", "sack", "ml"};
+        ArrayAdapter<String> unitAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, unitLabels);
         spinnerUnit.setAdapter(unitAdapter);
-        LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(0, dpToPx(50), 1.1f);
-        spinnerParams.setMargins(dpToPx(8), 0, 0, 0);
-        spinnerUnit.setLayoutParams(spinnerParams);
-        row2.addView(spinnerUnit);
-        inputLayout.addView(row2);
+        LinearLayout.LayoutParams spinnerLp = new LinearLayout.LayoutParams(0, dpToPx(54), 1.0f);
+        spinnerLp.setMargins(dpToPx(8), dpToPx(4), 0, 0);
+        spinnerUnit.setLayoutParams(spinnerLp);
+        rowQty.addView(spinnerUnit);
+        dlgRoot.addView(rowQty);
 
-        // Row 3: Purchase Rate + Selling Rate
-        LinearLayout row3 = new LinearLayout(this);
-        row3.setOrientation(LinearLayout.HORIZONTAL);
-        row3.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams row3Params = new LinearLayout.LayoutParams(-1, -2);
-        row3Params.setMargins(0, dpToPx(6), 0, 0);
-        row3.setLayoutParams(row3Params);
+        // Row Rates
+        LinearLayout rowRates = new LinearLayout(this);
+        rowRates.setOrientation(LinearLayout.HORIZONTAL);
+        rowRates.setPadding(0, dpToPx(8), 0, 0);
 
-        final TextInputLayout tilPurchaseRate = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
-        tilPurchaseRate.setHint("৳ কেনা রেট");
-        tilPurchaseRate.setBoxStrokeColor(Color.parseColor("#0D9488"));
-        tilPurchaseRate.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
-        final TextInputEditText etPurchaseRate = new TextInputEditText(this);
-        etPurchaseRate.setTextSize(13.0f);
-        etPurchaseRate.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        tilPurchaseRate.addView(etPurchaseRate);
-        row3.addView(tilPurchaseRate);
+        final TextInputLayout tilPRate = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilPRate.setHint("কেনা দর / ক্রয় (৳)");
+        tilPRate.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
+        final TextInputEditText etPRate = new TextInputEditText(this);
+        etPRate.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        tilPRate.addView(etPRate);
+        rowRates.addView(tilPRate);
 
-        final TextInputLayout tilSellingRate = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
-        tilSellingRate.setHint("৳ বিক্রি রেট");
-        tilSellingRate.setBoxStrokeColor(Color.parseColor("#0D9488"));
-        LinearLayout.LayoutParams sellParams = new LinearLayout.LayoutParams(0, -2, 1.0f);
-        sellParams.setMargins(dpToPx(8), 0, 0, 0);
-        tilSellingRate.setLayoutParams(sellParams);
-        final TextInputEditText etSellingRate = new TextInputEditText(this);
-        etSellingRate.setTextSize(13.0f);
-        etSellingRate.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        tilSellingRate.addView(etSellingRate);
-        row3.addView(tilSellingRate);
-        inputLayout.addView(row3);
+        final TextInputLayout tilSRate = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputOutlinedStyle);
+        tilSRate.setHint("বেচা দর / বিক্রি (৳)");
+        LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(0, -2, 1.0f);
+        sLp.setMargins(dpToPx(8), 0, 0, 0);
+        tilSRate.setLayoutParams(sLp);
+        final TextInputEditText etSRate = new TextInputEditText(this);
+        etSRate.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        tilSRate.addView(etSRate);
+        rowRates.addView(tilSRate);
+        dlgRoot.addView(rowRates);
 
         // Live calculation preview
-        final TextView tvLiveCostPreview = new TextView(this);
-        tvLiveCostPreview.setText("পরিকল্পিত খরচ: ৳ ০.০০ | সম্ভাব্য লাভ: ৳ ০.০০");
-        tvLiveCostPreview.setTextSize(11.0f);
-        tvLiveCostPreview.setTextColor(Color.parseColor("#0F766E"));
-        tvLiveCostPreview.setTypeface(null, Typeface.BOLD);
-        tvLiveCostPreview.setPadding(0, dpToPx(6), 0, dpToPx(4));
-        inputLayout.addView(tvLiveCostPreview);
+        final TextView tvLiveCost = new TextView(this);
+        tvLiveCost.setText("পরিকল্পিত খরচ: ৳ ০ | সম্ভাব্য লাভ: ৳ ০");
+        tvLiveCost.setTextSize(11.5f);
+        tvLiveCost.setTextColor(Color.parseColor("#0F766E"));
+        tvLiveCost.setTypeface(null, Typeface.BOLD);
+        tvLiveCost.setPadding(dpToPx(2), dpToPx(8), dpToPx(2), dpToPx(4));
+        dlgRoot.addView(tvLiveCost);
 
-        // AutoComplete suggestions setup
-        StorageManager storage = StorageManager.getInstance(this);
-        final List<ProductModel> productMemoryList = storage.loadProductMemory();
+        // AutoComplete suggestions
+        List<ProductModel> productMemoryList = storage.loadProductMemory();
         List<String> suggestionNames = new ArrayList<>();
         for (ProductModel p : productMemoryList) {
             suggestionNames.add(p.getName());
         }
-        ArrayAdapter<String> nameSuggestAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, suggestionNames);
-        actItemName.setAdapter(nameSuggestAdapter);
+        ArrayAdapter<String> suggestAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, suggestionNames);
+        actName.setAdapter(suggestAdapter);
 
-        // On product selection -> Auto-fill unit, purchase rate, selling rate!
-        actItemName.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        actName.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String selectedName = (String) parent.getItemAtPosition(position);
                 ProductModel matched = storage.findProductByName(selectedName);
                 if (matched != null) {
                     if (matched.getLastPurchasePrice() > 0) {
-                        etPurchaseRate.setText(String.format(Locale.US, "%.0f", matched.getLastPurchasePrice()));
+                        etPRate.setText(String.format(Locale.US, "%.0f", matched.getLastPurchasePrice()));
                     }
                     if (matched.getSellingPrice() > 0) {
-                        etSellingRate.setText(String.format(Locale.US, "%.0f", matched.getSellingPrice()));
+                        etSRate.setText(String.format(Locale.US, "%.0f", matched.getSellingPrice()));
                     }
-                    // Match unit
                     String u = matched.getUnit();
                     for (int i = 0; i < unitCodes.length; i++) {
                         if (unitCodes[i].equalsIgnoreCase(u)) {
@@ -3954,8 +4805,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Recalculate live cost preview
-        TextWatcher costWatcher = new TextWatcher() {
+        TextWatcher watcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -3967,444 +4817,91 @@ public class MainActivity extends AppCompatActivity {
                     if (!qStr.isEmpty()) q = Double.parseDouble(qStr);
 
                     double pr = 0.0;
-                    String prStr = etPurchaseRate.getText().toString().trim();
+                    String prStr = etPRate.getText().toString().trim();
                     if (!prStr.isEmpty()) pr = Double.parseDouble(prStr);
 
                     double sr = 0.0;
-                    String srStr = etSellingRate.getText().toString().trim();
+                    String srStr = etSRate.getText().toString().trim();
                     if (!srStr.isEmpty()) sr = Double.parseDouble(srStr);
 
                     double total = q * pr;
                     double profit = q * Math.max(0.0, sr - pr);
-                    tvLiveCostPreview.setText("পরিকল্পিত খরচ: ৳ " + PdfExporter.formatBengaliNumber(total) + " | সম্ভাব্য লাভ: ৳ " + PdfExporter.formatBengaliNumber(profit));
+                    tvLiveCost.setText("পরিকল্পিত খরচ: ৳ " + PdfExporter.formatBengaliNumber(total) + " | সম্ভাব্য লাভ: ৳ " + PdfExporter.formatBengaliNumber(profit));
                 } catch (Exception ignored) {}
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         };
-        etQty.addTextChangedListener(costWatcher);
-        etPurchaseRate.addTextChangedListener(costWatcher);
-        etSellingRate.addTextChangedListener(costWatcher);
+        etQty.addTextChangedListener(watcher);
+        etPRate.addTextChangedListener(watcher);
+        etSRate.addTextChangedListener(watcher);
 
-        // Add Button
-        MaterialButton btnAddItem = new MaterialButton(this);
-        btnAddItem.setText("➕ স্মার্ট ফর্দে যোগ করুন");
-        btnAddItem.setTextSize(12.0f);
-        btnAddItem.setTextColor(Color.WHITE);
-        btnAddItem.setCornerRadius(dpToPx(12));
-        btnAddItem.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#0D9488")));
-        LinearLayout.LayoutParams addBtnParams = new LinearLayout.LayoutParams(-1, dpToPx(46));
-        addBtnParams.setMargins(0, dpToPx(8), 0, 0);
-        btnAddItem.setLayoutParams(addBtnParams);
-        inputLayout.addView(btnAddItem);
-
-        inputCard.addView(inputLayout);
-        inputCardWrapper.addView(inputCard);
-        linearLayout.addView(inputCardWrapper);
-
-        // Items Scroll List
-        NestedScrollView scroll = new NestedScrollView(this);
-        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(-1, 0, 1.0f);
-        scroll.setLayoutParams(scrollParams);
-        scroll.setFillViewport(true);
-        final LinearLayout itemsListContainer = new LinearLayout(this);
-        itemsListContainer.setOrientation(LinearLayout.VERTICAL);
-        itemsListContainer.setPadding(dpToPx(16), 0, dpToPx(16), dpToPx(16));
-        scroll.addView(itemsListContainer);
-        linearLayout.addView(scroll);
-
-        // Bottom Summary Bar & Post to Accounting Button
-        LinearLayout bottomBar = new LinearLayout(this);
-        bottomBar.setOrientation(LinearLayout.VERTICAL);
-        bottomBar.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(14));
-        bottomBar.setBackgroundColor(Color.parseColor("#FFFFFF"));
-        bottomBar.setElevation(dpToPx(6));
-
-        // Summary details row
-        LinearLayout sumDetailsRow = new LinearLayout(this);
-        sumDetailsRow.setOrientation(LinearLayout.HORIZONTAL);
-        sumDetailsRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        final TextView tvPlannedTotal = new TextView(this);
-        tvPlannedTotal.setTextSize(13.0f);
-        tvPlannedTotal.setTypeface(null, Typeface.BOLD);
-        tvPlannedTotal.setTextColor(Color.parseColor("#0F172A"));
-        tvPlannedTotal.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
-        sumDetailsRow.addView(tvPlannedTotal);
-
-        final TextView tvActualTotal = new TextView(this);
-        tvActualTotal.setTextSize(13.0f);
-        tvActualTotal.setTypeface(null, Typeface.BOLD);
-        tvActualTotal.setTextColor(Color.parseColor("#0D9488"));
-        sumDetailsRow.addView(tvActualTotal);
-        bottomBar.addView(sumDetailsRow);
-
-        final TextView tvPotentialProfit = new TextView(this);
-        tvPotentialProfit.setTextSize(11.5f);
-        tvPotentialProfit.setTextColor(Color.parseColor("#2563EB"));
-        tvPotentialProfit.setPadding(0, dpToPx(2), 0, dpToPx(8));
-        bottomBar.addView(tvPotentialProfit);
-
-        // Post To Accounting Button
-        final MaterialButton btnPostAccounting = new MaterialButton(this);
-        btnPostAccounting.setTextSize(13.0f);
-        btnPostAccounting.setCornerRadius(dpToPx(12));
-        LinearLayout.LayoutParams postBtnParams = new LinearLayout.LayoutParams(-1, dpToPx(48));
-        btnPostAccounting.setLayoutParams(postBtnParams);
-        bottomBar.addView(btnPostAccounting);
-        linearLayout.addView(bottomBar);
-
-        // Helper runnables
-        final Runnable[] refreshTotals = new Runnable[1];
-        final Runnable[] saveState = new Runnable[1];
-        final Runnable[] populateList = new Runnable[1];
-
-        refreshTotals[0] = new Runnable() {
-            @Override
-            public void run() {
-                double planned = fordi.getPlannedTotal();
-                double actual = fordi.getActualTotal();
-                double profit = fordi.getPotentialProfit();
-
-                tvPlannedTotal.setText("পরিকল্পিত: ৳ " + PdfExporter.formatBengaliNumber(planned));
-                tvActualTotal.setText("প্রকৃত কেনা: ৳ " + PdfExporter.formatBengaliNumber(actual));
-                tvPotentialProfit.setText("সম্ভাব্য মোট লাভ: ৳ " + PdfExporter.formatBengaliNumber(profit));
-
-                if (fordi.isPostedToAccounting()) {
-                    btnPostAccounting.setText("✓ আজকের হিসাবে যোগ করা হয়েছে (৳ " + PdfExporter.formatBengaliNumber(fordi.getPostedAmount()) + ")");
-                    btnPostAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#10B981")));
-                    btnPostAccounting.setTextColor(Color.WHITE);
-                    btnPostAccounting.setEnabled(false);
-                } else {
-                    btnPostAccounting.setText("🛒 আজকের কেনা হিসাবে যোগ করুন (৳ " + PdfExporter.formatBengaliNumber(actual > 0 ? actual : planned) + ")");
-                    btnPostAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#0D9488")));
-                    btnPostAccounting.setTextColor(Color.WHITE);
-                    btnPostAccounting.setEnabled(true);
-                }
-            }
-        };
-
-        saveState[0] = new Runnable() {
-            @Override
-            public void run() {
-                StorageManager sm = StorageManager.getInstance(MainActivity.this);
-                List<FordiModel> all = sm.loadFordiRecords();
-                for (int i = 0; i < all.size(); i++) {
-                    if (all.get(i).getId().equals(fordi.getId())) {
-                        all.set(i, fordi);
-                        break;
-                    }
-                }
-                sm.saveFordiRecords(all);
-                refreshTotals[0].run();
-                triggerAutoCloudBackup();
-            }
-        };
-
-        populateList[0] = new Runnable() {
-            @Override
-            public void run() {
-                itemsListContainer.removeAllViews();
-                if (fordi.getItems().isEmpty()) {
-                    TextView empty = new TextView(MainActivity.this);
-                    empty.setText("তালিকায় কোন পণ্য নেই। উপরের ফর্ম দিয়ে পণ্য যোগ করুন!");
-                    empty.setGravity(Gravity.CENTER);
-                    empty.setPadding(0, dpToPx(30), 0, dpToPx(30));
-                    empty.setTextColor(Color.parseColor("#64748B"));
-                    empty.setTypeface(null, Typeface.ITALIC);
-                    itemsListContainer.addView(empty);
-                    return;
-                }
-
-                for (final FordiItemModel item : fordi.getItems()) {
-                    MaterialCardView itemCard = new MaterialCardView(MainActivity.this);
-                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-                    lp.setMargins(0, 0, 0, dpToPx(8));
-                    itemCard.setLayoutParams(lp);
-                    itemCard.setRadius(dpToPx(14));
-                    itemCard.setCardElevation(dpToPx(1));
-                    itemCard.setStrokeWidth(dpToPx(1));
-                    itemCard.setStrokeColor(Color.parseColor(item.isChecked() ? "#A7F3D0" : "#E2E8F0"));
-                    itemCard.setCardBackgroundColor(Color.parseColor(item.isChecked() ? "#F0FDF4" : "#FFFFFF"));
-                    itemCard.setContentPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
-
-                    LinearLayout rowRoot = new LinearLayout(MainActivity.this);
-                    rowRoot.setOrientation(LinearLayout.VERTICAL);
-
-                    // Row 1: Checkbox + Name + Unit Badge + Delete
-                    LinearLayout r1 = new LinearLayout(MainActivity.this);
-                    r1.setOrientation(LinearLayout.HORIZONTAL);
-                    r1.setGravity(Gravity.CENTER_VERTICAL);
-
-                    CheckBox cb = new CheckBox(MainActivity.this);
-                    cb.setChecked(item.isChecked());
-                    cb.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#0D9488")));
-                    r1.addView(cb);
-
-                    TextView tvName = new TextView(MainActivity.this);
-                    tvName.setText(item.getProductName());
-                    tvName.setTextSize(14.0f);
-                    tvName.setTypeface(null, Typeface.BOLD);
-                    LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(0, -2, 1.0f);
-                    nameLp.setMargins(dpToPx(6), 0, dpToPx(6), 0);
-                    tvName.setLayoutParams(nameLp);
-                    if (item.isChecked()) {
-                        tvName.setPaintFlags(tvName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
-                        tvName.setTextColor(Color.parseColor("#64748B"));
-                    } else {
-                        tvName.setTextColor(Color.parseColor("#0F172A"));
-                    }
-                    r1.addView(tvName);
-
-                    // Unit Badge
-                    TextView tvUnitBadge = new TextView(MainActivity.this);
-                    tvUnitBadge.setText(ProductModel.getBengaliUnitLabel(item.getUnit()));
-                    tvUnitBadge.setTextSize(11.0f);
-                    tvUnitBadge.setTextColor(Color.parseColor("#0F766E"));
-                    tvUnitBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
-                    GradientDrawable badgeBg = new GradientDrawable();
-                    badgeBg.setShape(GradientDrawable.RECTANGLE);
-                    badgeBg.setCornerRadius(dpToPx(6));
-                    badgeBg.setColor(Color.parseColor("#CCFBF1"));
-                    tvUnitBadge.setBackground(badgeBg);
-                    r1.addView(tvUnitBadge);
-
-                    MaterialButton btnDel = new MaterialButton(MainActivity.this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                    btnDel.setStrokeWidth(0);
-                    LinearLayout.LayoutParams delLp = new LinearLayout.LayoutParams(dpToPx(34), dpToPx(34));
-                    delLp.setMargins(dpToPx(6), 0, 0, 0);
-                    btnDel.setLayoutParams(delLp);
-                    btnDel.setIcon(ContextCompat.getDrawable(MainActivity.this, R.drawable.ic_trash));
-                    btnDel.setIconSize(dpToPx(13));
-                    btnDel.setIconPadding(0);
-                    btnDel.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-                    btnDel.setIconTint(ColorStateList.valueOf(Color.parseColor("#EF4444")));
-                    btnDel.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            fordi.getItems().remove(item);
-                            saveState[0].run();
-                            populateList[0].run();
-                        }
-                    });
-                    r1.addView(btnDel);
-                    rowRoot.addView(r1);
-
-                    // Row 2: Rates and Planned vs Actual details
-                    LinearLayout r2 = new LinearLayout(MainActivity.this);
-                    r2.setOrientation(LinearLayout.HORIZONTAL);
-                    r2.setGravity(Gravity.CENTER_VERTICAL);
-                    r2.setPadding(dpToPx(36), dpToPx(2), 0, 0);
-
-                    TextView tvRates = new TextView(MainActivity.this);
-                    String uLabel = ProductModel.getBengaliUnitLabel(item.getUnit());
-                    tvRates.setText("পরিকল্পিত: " + PdfExporter.formatBengaliNumber(item.getPlannedQuantity()) + " " + uLabel + " × ৳" + PdfExporter.formatBengaliNumber(item.getPurchaseRate()) + " = ৳" + PdfExporter.formatBengaliNumber(item.getPlannedTotal()));
-                    tvRates.setTextSize(12.0f);
-                    tvRates.setTextColor(Color.parseColor("#334155"));
-                    tvRates.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
-                    r2.addView(tvRates);
-
-                    if (item.getPotentialProfit() > 0) {
-                        TextView tvProfitTag = new TextView(MainActivity.this);
-                        tvProfitTag.setText("লাভ: ৳" + PdfExporter.formatBengaliNumber(item.getPotentialProfit()));
-                        tvProfitTag.setTextSize(11.0f);
-                        tvProfitTag.setTypeface(null, Typeface.BOLD);
-                        tvProfitTag.setTextColor(Color.parseColor("#2563EB"));
-                        r2.addView(tvProfitTag);
-                    }
-                    rowRoot.addView(r2);
-
-                    // Row 3: Actual Purchase adjustment link
-                    if (item.isChecked() && item.getActualQuantity() > 0) {
-                        TextView tvActualDetail = new TextView(MainActivity.this);
-                        tvActualDetail.setText("🛒 কেনা হয়েছে: " + PdfExporter.formatBengaliNumber(item.getActualQuantity()) + " " + uLabel + " (দর ৳" + PdfExporter.formatBengaliNumber(item.getActualPurchaseRate()) + ") = ৳" + PdfExporter.formatBengaliNumber(item.getActualTotal()));
-                        tvActualDetail.setTextSize(11.5f);
-                        tvActualDetail.setTypeface(null, Typeface.BOLD);
-                        tvActualDetail.setTextColor(Color.parseColor("#059669"));
-                        tvActualDetail.setPadding(dpToPx(36), dpToPx(2), 0, 0);
-                        rowRoot.addView(tvActualDetail);
-                    }
-
-                    // Checkbox listener
-                    cb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                        @Override
-                        public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                            item.setChecked(isChecked);
-                            saveState[0].run();
-                            populateList[0].run();
-                        }
-                    });
-
-                    // Item Click -> Open Quick Edit dialog (Adjust planned qty, rates, actual qty)
-                    itemCard.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            showEditFordiItemDialog(item, fordi, saveState, populateList);
-                        }
-                    });
-
-                    itemCard.addView(rowRoot);
-                    itemsListContainer.addView(itemCard);
-                }
-            }
-        };
-
-        // Title change listener
-        etTitleInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String val = s.toString().trim();
-                if (!val.isEmpty()) {
-                    fordi.setTitle(val);
-                    saveState[0].run();
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
-        // Add Item Button Listener
-        btnAddItem.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String name = actItemName.getText().toString().trim();
-                if (name.isEmpty()) {
-                    tilItemName.setError("পণ্যের নাম দিন");
-                    return;
-                }
-                tilItemName.setError(null);
-
-                double qty = 1.0;
-                try {
-                    String qStr = etQty.getText().toString().trim();
-                    if (!qStr.isEmpty()) qty = Double.parseDouble(qStr);
-                } catch (Exception ignored) {}
-
-                double pRate = 0.0;
-                try {
-                    String prStr = etPurchaseRate.getText().toString().trim();
-                    if (!prStr.isEmpty()) pRate = Double.parseDouble(prStr);
-                } catch (Exception ignored) {}
-
-                double sRate = 0.0;
-                try {
-                    String srStr = etSellingRate.getText().toString().trim();
-                    if (!srStr.isEmpty()) sRate = Double.parseDouble(srStr);
-                } catch (Exception ignored) {}
-
-                int selectedUnitIdx = spinnerUnit.getSelectedItemPosition();
-                String unit = unitCodes[Math.max(0, Math.min(selectedUnitIdx, unitCodes.length - 1))];
-
-                // Create Item
-                FordiItemModel newItem = new FordiItemModel(
-                        null,
-                        name,
-                        unit,
-                        qty,
-                        pRate,
-                        sRate
-                );
-                fordi.getItems().add(newItem);
-
-                // Update product memory
-                ProductModel product = storage.findProductByName(name);
-                if (product == null) {
-                    product = new ProductModel(null, name, unit, pRate, sRate, "বাজার ফর্দ");
-                } else {
-                    if (pRate > 0) product.setLastPurchasePrice(pRate);
-                    if (sRate > 0) product.setSellingPrice(sRate);
-                    product.setUnit(unit);
-                }
-                storage.saveOrUpdateProduct(product);
-
-                // Clear input
-                actItemName.setText("");
-                etQty.setText("1");
-                etPurchaseRate.setText("");
-                etSellingRate.setText("");
-                actItemName.requestFocus();
-
-                saveState[0].run();
-                populateList[0].run();
-                Toast.makeText(MainActivity.this, "✅ পণ্যটি ফর্দে যুক্ত হয়েছে!", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        // Post to Accounting Button Listener
-        btnPostAccounting.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (fordi.isPostedToAccounting()) {
-                    Toast.makeText(MainActivity.this, "এই ফর্দটি আগেই হিসাবভুক্ত করা হয়েছে!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                double actualTotal = fordi.getActualTotal();
-                if (actualTotal <= 0) {
-                    // If no actual items ticked, ask if user wants to mark all items as bought
-                    new MaterialAlertDialogBuilder(MainActivity.this)
-                            .setTitle("🛒 সব পণ্য কেনা নিশ্চিত করুন")
-                            .setMessage("আপনি কি ফর্দের সব পণ্য পরিকল্পিত মূল্যে কেনা হিসেবে দৈনিক খরচের খাতায় যোগ করতে চান? (মোট ৳" + PdfExporter.formatBengaliNumber(fordi.getPlannedTotal()) + ")")
-                            .setPositiveButton("হ্যাঁ, সব পণ্য কিনুন ও যোগ করুন", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    for (FordiItemModel item : fordi.getItems()) {
-                                        item.setChecked(true);
-                                    }
-                                    saveState[0].run();
-                                    confirmAndPostToAccounting(fordi, refreshTotals, populateList);
-                                }
-                            })
-                            .setNegativeButton("বাতিল", null)
-                            .show();
-                    return;
-                }
-                confirmAndPostToAccounting(fordi, refreshTotals, populateList);
-            }
-        });
-
-        refreshTotals[0].run();
-        populateList[0].run();
-        dialog.setContentView(linearLayout);
-        dialog.show();
-    }
-
-    private void confirmAndPostToAccounting(final FordiModel fordi, final Runnable[] refreshTotals, final Runnable[] populateList) {
-        final double actualTotal = fordi.getActualTotal();
-        int count = fordi.getBoughtItemCount();
-        final String selectedDate = this.viewModel != null ? this.viewModel.getActiveDateKey() : new SimpleDateFormat("dd-MM-yyyy", Locale.US).format(new Date());
-
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("🛒 আজকের কেনা হিসাবে যোগ করবেন?")
-                .setMessage("ফর্দ: " + fordi.getTitle() + "\n" +
-                        "কেনা পণ্য: " + toBengaliDigits(String.valueOf(count)) + " টি\n" +
-                        "মোট ক্রয় মূল্য: ৳ " + PdfExporter.formatBengaliNumber(actualTotal) + "\n\n" +
-                        "এটি দৈনিক খাতার '" + selectedDate + "' তারিখে 'পণ্য ক্রয় / মাল কেনা' হিসাবে যোগ হবে।")
-                .setPositiveButton("হ্যাঁ, যোগ করুন", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        AccountingService accountingService = AccountingService.getInstance(MainActivity.this);
-                        boolean success = accountingService.postFordiPurchaseToDailyAccounting(fordi, selectedDate);
-                        if (success) {
-                            refreshTotals[0].run();
-                            populateList[0].run();
-                            updateFordiKhataUI();
-                            if (MainActivity.this.viewModel != null) {
-                                MainActivity.this.viewModel.loadSavedData();
-                            }
-                            triggerAutoCloudBackup();
-                            Toast.makeText(MainActivity.this, "✅ ফর্দের ৳" + PdfExporter.formatBengaliNumber(actualTotal) + " সফলভাবে আজকের ক্রয় হিসাবে যোগ হয়েছে!", Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(MainActivity.this, "❌ হিসাব যোগ করা সম্ভব হয়নি বা আগেই যোগ হয়েছে!", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                })
+        final androidx.appcompat.app.AlertDialog addDialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("➕ ফর্দে পণ্য যোগ করুন")
+                .setView(dlgRoot)
+                .setPositiveButton("ফর্দে যোগ করুন", null)
                 .setNegativeButton("বাতিল", null)
-                .show();
+                .create();
+
+        addDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface d) {
+                Button btnPos = addDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+                btnPos.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String name = actName.getText().toString().trim();
+                        if (name.isEmpty()) {
+                            tilName.setError("পণ্যের নাম লিখুন");
+                            return;
+                        }
+                        tilName.setError(null);
+
+                        double qty = 1.0;
+                        try {
+                            String qStr = etQty.getText().toString().trim();
+                            if (!qStr.isEmpty()) qty = Double.parseDouble(qStr);
+                        } catch (Exception ignored) {}
+
+                        double pRate = 0.0;
+                        try {
+                            String prStr = etPRate.getText().toString().trim();
+                            if (!prStr.isEmpty()) pRate = Double.parseDouble(prStr);
+                        } catch (Exception ignored) {}
+
+                        double sRate = 0.0;
+                        try {
+                            String srStr = etSRate.getText().toString().trim();
+                            if (!srStr.isEmpty()) sRate = Double.parseDouble(srStr);
+                        } catch (Exception ignored) {}
+
+                        int selectedUnitIdx = spinnerUnit.getSelectedItemPosition();
+                        String unit = unitCodes[Math.max(0, Math.min(selectedUnitIdx, unitCodes.length - 1))];
+
+                        FordiItemModel newItem = new FordiItemModel(null, name, unit, qty, pRate, sRate);
+                        fordi.getItems().add(newItem);
+
+                        // Save product in memory
+                        ProductModel product = storage.findProductByName(name);
+                        if (product == null) {
+                            product = new ProductModel(null, name, unit, pRate, sRate, "বাজার ফর্দ");
+                        } else {
+                            if (pRate > 0) product.setLastPurchasePrice(pRate);
+                            if (sRate > 0) product.setSellingPrice(sRate);
+                            product.setUnit(unit);
+                        }
+                        storage.saveOrUpdateProduct(product);
+
+                        saveActiveFordi(fordi);
+                        Toast.makeText(MainActivity.this, "✅ '" + name + "' ফর্দে যোগ হয়েছে!", Toast.LENGTH_SHORT).show();
+                        addDialog.dismiss();
+                    }
+                });
+            }
+        });
+
+        addDialog.show();
     }
 
     private void showEditFordiItemDialog(final FordiItemModel item, final FordiModel fordi, final Runnable[] saveState, final Runnable[] populateList) {
@@ -4469,6 +4966,13 @@ public class MainActivity extends AppCompatActivity {
         rowRates.addView(tilSRate);
         dlgRoot.addView(rowRates);
 
+        // Checkbox: Mark as bought
+        final CheckBox cbBought = new CheckBox(this);
+        cbBought.setText("পণ্যটি কেনা সম্পন্ন হয়েছে (Bought)");
+        cbBought.setChecked(item.isChecked());
+        cbBought.setPadding(dpToPx(4), dpToPx(8), dpToPx(4), dpToPx(4));
+        dlgRoot.addView(cbBought);
+
         new MaterialAlertDialogBuilder(this)
                 .setTitle("✏️ পণ্য ও দরদাম পরিবর্তন")
                 .setView(dlgRoot)
@@ -4495,11 +4999,68 @@ public class MainActivity extends AppCompatActivity {
                             String sr = etSRate.getText().toString().trim();
                             if (!sr.isEmpty()) item.setSellingRate(Double.parseDouble(sr));
 
+                            item.setChecked(cbBought.isChecked());
                             item.recalculate();
                         } catch (Exception ignored) {}
 
-                        saveState[0].run();
-                        populateList[0].run();
+                        if (saveState != null && saveState[0] != null) {
+                            saveState[0].run();
+                        } else {
+                            saveActiveFordi(fordi);
+                        }
+                        if (populateList != null && populateList[0] != null) {
+                            populateList[0].run();
+                        }
+                        Toast.makeText(MainActivity.this, "✅ পণ্য তথ্য আপডেট হয়েছে!", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNeutralButton("🗑️ এই পণ্য মুছুন", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int which) {
+                        fordi.getItems().remove(item);
+                        if (saveState != null && saveState[0] != null) {
+                            saveState[0].run();
+                        } else {
+                            saveActiveFordi(fordi);
+                        }
+                        if (populateList != null && populateList[0] != null) {
+                            populateList[0].run();
+                        }
+                        Toast.makeText(MainActivity.this, "🗑️ পণ্য মুছে ফেলা হয়েছে!", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("বাতিল", null)
+                .show();
+    }
+
+    private void confirmAndPostToAccounting(final FordiModel fordi, final Runnable[] refreshTotals, final Runnable[] populateList) {
+        final double actualTotal = fordi.getActualTotal() > 0 ? fordi.getActualTotal() : fordi.getPlannedTotal();
+        int count = fordi.getBoughtItemCount() > 0 ? fordi.getBoughtItemCount() : fordi.getItems().size();
+        final String selectedDate = this.viewModel != null ? this.viewModel.getActiveDateKey() : new SimpleDateFormat("dd-MM-yyyy", Locale.US).format(new Date());
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("🛒 আজকের কেনা হিসাবে যোগ করবেন?")
+                .setMessage("ফর্দ: " + fordi.getTitle() + "\n" +
+                        "কেনা পণ্য: " + toBengaliDigits(String.valueOf(count)) + " টি\n" +
+                        "মোট ক্রয় মূল্য: ৳ " + PdfExporter.formatBengaliNumber(actualTotal) + "\n\n" +
+                        "এটি দৈনিক খাতার '" + selectedDate + "' তারিখে 'পণ্য ক্রয় / মাল কেনা' হিসাবে যোগ হবে।")
+                .setPositiveButton("হ্যাঁ, যোগ করুন", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        AccountingService accountingService = AccountingService.getInstance(MainActivity.this);
+                        boolean success = accountingService.postFordiPurchaseToDailyAccounting(fordi, selectedDate);
+                        if (success) {
+                            if (refreshTotals != null && refreshTotals[0] != null) refreshTotals[0].run();
+                            if (populateList != null && populateList[0] != null) populateList[0].run();
+                            updateFordiKhataUI();
+                            if (MainActivity.this.viewModel != null) {
+                                MainActivity.this.viewModel.loadSavedData();
+                            }
+                            triggerAutoCloudBackup();
+                            Toast.makeText(MainActivity.this, "✅ ফর্দের ৳" + PdfExporter.formatBengaliNumber(actualTotal) + " সফলভাবে আজকের ক্রয় হিসাবে যোগ হয়েছে!", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(MainActivity.this, "❌ হিসাব যোগ করা সম্ভব হয়নি বা আগেই যোগ হয়েছে!", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 })
                 .setNegativeButton("বাতিল", null)
@@ -4525,6 +5086,9 @@ public class MainActivity extends AppCompatActivity {
                         if (targetIndex != -1) {
                             allFordi.remove(targetIndex);
                             storage.saveFordiRecords(allFordi);
+                            if (fordi.getId().equals(MainActivity.this.currentActiveFordiId)) {
+                                MainActivity.this.currentActiveFordiId = null;
+                            }
                             Toast.makeText(MainActivity.this, "🗑️ ফর্দটি মুছে ফেলা হয়েছে!", Toast.LENGTH_SHORT).show();
                             updateFordiKhataUI();
                             triggerAutoCloudBackup();
@@ -4537,38 +5101,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void shareFordiList(FordiModel fordi) {
         StringBuilder sb = new StringBuilder();
-        sb.append("📋 ").append(fordi.getTitle()).append(" - স্মার্ট বাজার ফর্দ\n");
+        sb.append("📋 ").append(fordi.getTitle()).append(" - বাজার ফর্দ\n");
         sb.append("তারিখ: ").append(fordi.getDate()).append("\n");
-        sb.append("-----------------------------\n");
+        sb.append("─────────────────────────\n");
+        sb.append("পণ্য      পরিমাণ    ক্রয়→বেচা       মোট\n");
+        sb.append("─────────────────────────\n");
         double totalPlanned = 0.0d;
-        double totalActual = 0.0d;
-        int checked = 0;
         for (FordiItemModel item : fordi.getItems()) {
             totalPlanned += item.getPlannedTotal();
-            totalActual += item.getActualTotal();
-            String status = item.isChecked() ? "✅ " : "⬜ ";
-            sb.append(status).append(item.getProductName());
             String uLabel = ProductModel.getBengaliUnitLabel(item.getUnit());
-            sb.append(" (").append(PdfExporter.formatBengaliNumber(item.getPlannedQuantity())).append(" ").append(uLabel).append(")");
-            if (item.getPurchaseRate() > 0.0d) {
-                sb.append(" - দর ৳").append(PdfExporter.formatBengaliNumber(item.getPurchaseRate()));
-                sb.append(" = ৳").append(PdfExporter.formatBengaliNumber(item.getPlannedTotal()));
-            }
-            sb.append("\n");
-            if (item.isChecked()) {
-                checked++;
-            }
+            String qStr = PdfExporter.formatBengaliNumber(item.getPlannedQuantity()) + uLabel;
+            String pRate = PdfExporter.formatBengaliNumber(item.getPurchaseRate());
+            String sRate = item.getSellingRate() > 0 ? PdfExporter.formatBengaliNumber(item.getSellingRate()) : "—";
+            String totStr = PdfExporter.formatBengaliNumber(item.getPlannedTotal());
+
+            sb.append(item.getProductName()).append("  ")
+              .append(qStr).append("  ")
+              .append(pRate).append("→").append(sRate).append("  ")
+              .append(totStr).append("\n");
         }
-        sb.append("-----------------------------\n");
-        sb.append("📊 পরিকল্পিত বাজেট: ৳ ").append(PdfExporter.formatBengaliNumber(totalPlanned)).append("\n");
-        if (totalActual > 0) {
-            sb.append("🛒 প্রকৃত কেনা খরচ: ৳ ").append(PdfExporter.formatBengaliNumber(totalActual)).append("\n");
-        }
-        if (fordi.getPotentialProfit() > 0) {
-            sb.append("💹 সম্ভাব্য মোট লাভ: ৳ ").append(PdfExporter.formatBengaliNumber(fordi.getPotentialProfit())).append("\n");
-        }
-        sb.append("🛍️ কেনা হয়েছে: ").append(toBengaliDigits(String.valueOf(checked))).append("/").append(toBengaliDigits(String.valueOf(fordi.getItems().size()))).append(" টি পণ্য\n\n");
-        sb.append("— মাওয়া (MAWA) ক্যাশ খাতা");
+        sb.append("─────────────────────────\n");
+        sb.append("                     মোট ৳ ").append(PdfExporter.formatBengaliNumber(totalPlanned)).append("\n\n");
+        sb.append("— মাওয়া (MAWA) স্মার্ট ক্যাশ খাতা");
         String msg = sb.toString();
 
         ClipboardManager clipboard = (ClipboardManager) getSystemService("clipboard");
@@ -4581,6 +5135,13 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(Intent.EXTRA_TEXT, msg);
         intent.setType("text/plain");
         startActivity(Intent.createChooser(intent, "ফর্দটি শেয়ার করুন"));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateCloudBackupUI();
+        updateHeaderSyncStatusUI();
     }
 
     /* JADX INFO: Access modifiers changed from: protected */

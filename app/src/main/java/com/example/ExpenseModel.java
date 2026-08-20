@@ -6,6 +6,8 @@ import java.io.Serializable;
 public class ExpenseModel implements Serializable {
     public static final String TYPE_PURCHASE = "PURCHASE";
     public static final String TYPE_OPERATING_EXPENSE = "OPERATING_EXPENSE";
+    public static final String TYPE_SHOP = "SHOP";
+    public static final String TYPE_HOME = "HOME";
     public static final String TYPE_LEGACY_EXPENSE = "LEGACY_EXPENSE";
 
     private double amount;
@@ -14,10 +16,15 @@ public class ExpenseModel implements Serializable {
     private String name;
     private String time;
     private String type;
+    private String expenseType;
     private String note;
+    private long updatedAt;
+    private long deletedAt;
 
     public ExpenseModel() {
         this.type = TYPE_LEGACY_EXPENSE;
+        this.expenseType = TYPE_SHOP;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public ExpenseModel(String id, String name, double amount, String date, String time) {
@@ -27,6 +34,8 @@ public class ExpenseModel implements Serializable {
         this.date = date;
         this.time = time;
         this.type = autoClassifyType(name);
+        this.expenseType = (this.type.equals(TYPE_PURCHASE)) ? TYPE_PURCHASE : TYPE_SHOP;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public ExpenseModel(String id, String name, double amount, String date, String time, String type) {
@@ -36,6 +45,25 @@ public class ExpenseModel implements Serializable {
         this.date = date;
         this.time = time;
         this.type = (type != null && !type.trim().isEmpty()) ? type : autoClassifyType(name);
+        if (TYPE_HOME.equalsIgnoreCase(type)) {
+            this.expenseType = TYPE_HOME;
+        } else if (TYPE_PURCHASE.equalsIgnoreCase(type)) {
+            this.expenseType = TYPE_PURCHASE;
+        } else {
+            this.expenseType = TYPE_SHOP;
+        }
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    public ExpenseModel(String id, String name, double amount, String date, String time, String type, String expenseType) {
+        this.id = id;
+        this.name = name;
+        this.amount = amount;
+        this.date = date;
+        this.time = time;
+        this.type = (type != null && !type.trim().isEmpty()) ? type : autoClassifyType(name);
+        this.expenseType = (expenseType != null && !expenseType.trim().isEmpty()) ? expenseType : TYPE_SHOP;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public static String autoClassifyType(String name) {
@@ -143,16 +171,57 @@ public class ExpenseModel implements Serializable {
         this.note = note;
     }
 
+    public String getExpenseType() {
+        if (this.expenseType == null || this.expenseType.trim().isEmpty()) {
+            if (TYPE_HOME.equalsIgnoreCase(this.type)) {
+                return TYPE_HOME;
+            } else if (TYPE_PURCHASE.equalsIgnoreCase(this.type)) {
+                return TYPE_PURCHASE;
+            } else {
+                return TYPE_SHOP;
+            }
+        }
+        return this.expenseType;
+    }
+
+    public void setExpenseType(String expenseType) {
+        this.expenseType = expenseType;
+    }
+
+    public long getUpdatedAt() {
+        return this.updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public long getDeletedAt() {
+        return this.deletedAt;
+    }
+
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public boolean isHomeExpense() {
+        return TYPE_HOME.equalsIgnoreCase(getExpenseType()) || TYPE_HOME.equalsIgnoreCase(getType());
+    }
+
+    public boolean isShopExpense() {
+        return TYPE_SHOP.equalsIgnoreCase(getExpenseType()) || isOperatingExpense();
+    }
+
     public boolean isPurchase() {
-        return TYPE_PURCHASE.equalsIgnoreCase(getType());
+        return TYPE_PURCHASE.equalsIgnoreCase(getType()) || TYPE_PURCHASE.equalsIgnoreCase(getExpenseType());
     }
 
     public boolean isOperatingExpense() {
-        return TYPE_OPERATING_EXPENSE.equalsIgnoreCase(getType());
+        return TYPE_OPERATING_EXPENSE.equalsIgnoreCase(getType()) || TYPE_SHOP.equalsIgnoreCase(getExpenseType());
     }
 
     public boolean isLegacyExpense() {
         String t = getType();
-        return TYPE_LEGACY_EXPENSE.equalsIgnoreCase(t) || (!isPurchase() && !isOperatingExpense());
+        return TYPE_LEGACY_EXPENSE.equalsIgnoreCase(t) || (!isPurchase() && !isOperatingExpense() && !isHomeExpense());
     }
 }

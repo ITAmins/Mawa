@@ -45,6 +45,31 @@ public class StorageManager {
         this.sharedPreferences.edit().putString("key_expenses_" + date, json).apply();
     }
 
+    public void addExpense(ExpenseModel expense) {
+        if (expense == null) return;
+        String date = expense.getDate();
+        if (date == null || date.isEmpty()) {
+            date = new java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.US).format(new java.util.Date());
+            expense.setDate(date);
+        }
+        List<ExpenseModel> list = loadExpenses(date);
+        list.add(0, expense);
+        saveExpenses(date, list);
+        saveActiveDate(date);
+    }
+
+    public List<ExpenseModel> getAllExpenses() {
+        List<ExpenseModel> all = new ArrayList<>();
+        List<String> activeDates = getActiveDates();
+        for (String d : activeDates) {
+            List<ExpenseModel> exps = loadExpenses(d);
+            if (exps != null) {
+                all.addAll(exps);
+            }
+        }
+        return all;
+    }
+
     public List<ExpenseModel> loadExpenses(String date) {
         String json = this.sharedPreferences.getString("key_expenses_" + date, null);
         if (json == null) {

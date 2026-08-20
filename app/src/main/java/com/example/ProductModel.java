@@ -23,6 +23,7 @@ public class ProductModel implements Serializable {
     private String category; // e.g. চাল/ডাল, তেল, চিনি, মসলা, বিস্কুট, পানীয়, পরিষ্কারক, অন্যান্য
     private long createdAt;
     private long updatedAt;
+    private long deletedAt;
 
     public static final String UNIT_KG = "kg";
     public static final String UNIT_GRAM = "gram";
@@ -216,6 +217,14 @@ public class ProductModel implements Serializable {
 
     public void setUpdatedAt(long updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public long getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public String getSuggestionDisplay() {

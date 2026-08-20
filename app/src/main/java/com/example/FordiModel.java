@@ -26,12 +26,15 @@ public class FordiModel implements Serializable {
     private String postedExpenseId;
     private double postedAmount;
     private String postedDate;
+    private long updatedAt;
+    private long deletedAt;
 
     public FordiModel() {
         this.id = UUID.randomUUID().toString();
         this.items = new ArrayList<>();
         this.colorHex = "#F0FDFA";
         this.status = STATUS_DRAFT;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public FordiModel(String id, String title, String date, List<FordiItemModel> items, String colorHex) {
@@ -41,6 +44,7 @@ public class FordiModel implements Serializable {
         this.items = items != null ? items : new ArrayList<>();
         this.colorHex = colorHex != null ? colorHex : "#F0FDFA";
         this.status = STATUS_DRAFT;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public double getPlannedTotal() {
@@ -178,5 +182,21 @@ public class FordiModel implements Serializable {
 
     public void setPostedDate(String postedDate) {
         this.postedDate = postedDate;
+    }
+
+    public long getUpdatedAt() {
+        return this.updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public long getDeletedAt() {
+        return this.deletedAt;
+    }
+
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }
