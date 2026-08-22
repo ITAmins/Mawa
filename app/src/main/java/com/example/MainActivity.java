@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private MainViewModel viewModel;
     private List<ExpenseModel> allExpenses = new ArrayList();
+    private String selectedExpenseType = ExpenseModel.TYPE_SHOP;
     private String searchFilterText = "";
     private String currentBakiFilter = "ALL";
     private String currentActiveFordiId = null;
@@ -166,6 +167,20 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         
+        double shopTotal = 0.0d;
+        double homeTotal = 0.0d;
+        for (ExpenseModel exp : this.allExpenses) {
+            if (exp == null) continue;
+            if (exp.isHomeExpense()) {
+                homeTotal += exp.getAmount();
+            } else {
+                shopTotal += exp.getAmount();
+            }
+        }
+        if (this.binding.tvExpenseBreakdownShopHome != null) {
+            this.binding.tvExpenseBreakdownShopHome.setText("দোকান ৳" + PdfExporter.formatBengaliNumber(shopTotal) + " • বাড়ি ৳" + PdfExporter.formatBengaliNumber(homeTotal));
+        }
+
         int totalCount = filteredList.size();
         if (this.binding.tvExpensesCountBadge != null) {
             this.binding.tvExpensesCountBadge.setText(PdfExporter.toBengaliDigits(String.valueOf(totalCount)) + "টি");
@@ -808,38 +823,171 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupListeners() {
-        this.binding.etExpenseName.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-                Object item = adapterView.getItemAtPosition(position);
-                if (item != null) {
-                    binding.etExpenseName.setText(item.toString());
-                    binding.etExpenseName.setSelection(item.toString().length());
-                }
-                binding.etExpenseAmount.requestFocus();
+    public void openExpenseDrawer() {
+        if (this.binding == null || this.binding.layoutExpenseDrawer == null) return;
+        this.binding.layoutExpenseDrawerOverlay.setVisibility(View.VISIBLE);
+        this.binding.layoutExpenseDrawer.setVisibility(View.VISIBLE);
+        if (this.binding.tvDrawerSuccessBadge != null) {
+            this.binding.tvDrawerSuccessBadge.setVisibility(View.GONE);
+        }
+        if (this.viewModel != null && this.binding.tvDrawerDate != null) {
+            this.binding.tvDrawerDate.setText(this.viewModel.getCurrentFormattedDate() + " (" + this.viewModel.getBengaliDayOfWeek() + ")");
+        }
+        if (this.binding.etDrawerExpenseAmount != null) {
+            this.binding.etDrawerExpenseAmount.requestFocus();
+        }
+    }
+
+    public void closeExpenseDrawer() {
+        if (this.binding == null || this.binding.layoutExpenseDrawer == null) return;
+        this.binding.layoutExpenseDrawer.setVisibility(View.GONE);
+        if (this.binding.layoutExpenseDrawerOverlay != null) {
+            this.binding.layoutExpenseDrawerOverlay.setVisibility(View.GONE);
+        }
+        try {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null && getCurrentFocus() != null) {
+                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
             }
-        });
-        this.binding.etExpenseName.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+        } catch (Exception ignored) {}
+    }
+
+    public boolean isExpenseDrawerOpen() {
+        return this.binding != null && this.binding.layoutExpenseDrawer != null && this.binding.layoutExpenseDrawer.getVisibility() == View.VISIBLE;
+    }
+
+    private void saveExpenseFromDrawer() {
+        if (this.binding == null) return;
+        String name = this.binding.etDrawerExpenseName.getText() != null ? this.binding.etDrawerExpenseName.getText().toString().trim() : "";
+        String amountStr = this.binding.etDrawerExpenseAmount.getText() != null ? this.binding.etDrawerExpenseAmount.getText().toString().trim() : "";
+
+        if (amountStr.isEmpty()) {
+            this.binding.etDrawerExpenseAmount.setError("টাকার পরিমাণ লিখুন!");
+            Toast.makeText(this, "অনুগ্রহ করে টাকার সঠিক পরিমাণ দিন", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (name.isEmpty()) {
+            this.binding.etDrawerExpenseName.setError("কী জন্য খরচ হয়েছে লিখুন!");
+            Toast.makeText(this, "অনুগ্রহ করে খরচের বিবরণ বা নাম লিখুন", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            double amount = Double.parseDouble(amountStr);
+            if (amount <= 0.0d) {
+                this.binding.etDrawerExpenseAmount.setError("টাকার পরিমাণ শূন্য বা ঋণাত্মক হতে পারবে না!");
+                Toast.makeText(this, "টাকার পরিমাণ অবশ্যই শূন্যের চেয়ে বড় হতে হবে", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            boolean success = this.viewModel.addExpense(name, amount, this.selectedExpenseType);
+            if (success) {
+                this.binding.etDrawerExpenseName.setText("");
+                this.binding.etDrawerExpenseAmount.setText("");
+                this.binding.etDrawerExpenseName.clearFocus();
+                this.binding.etDrawerExpenseAmount.requestFocus();
+                
+                // Show inline confirmation badge in drawer without closing
+                if (this.binding.tvDrawerSuccessBadge != null) {
+                    this.binding.tvDrawerSuccessBadge.setVisibility(View.VISIBLE);
+                    this.binding.tvDrawerSuccessBadge.postDelayed(() -> {
+                        if (binding != null && binding.tvDrawerSuccessBadge != null) {
+                            binding.tvDrawerSuccessBadge.setVisibility(View.GONE);
+                        }
+                    }, 2500L);
+                }
+                Toast.makeText(this, "✓ খরচ সফলভাবে যোগ করা হয়েছে", Toast.LENGTH_SHORT).show();
+                planAutoCloudBackup();
+            }
+        } catch (NumberFormatException e) {
+            this.binding.etDrawerExpenseAmount.setError("সঠিক সংখ্যা দিন!");
+        }
+    }
+
+    private void setupExpenseDrawer() {
+        if (this.binding == null) return;
+
+        // Drawer Close Actions
+        if (this.binding.btnDrawerClose != null) {
+            this.binding.btnDrawerClose.setOnClickListener(v -> closeExpenseDrawer());
+        }
+        if (this.binding.layoutExpenseDrawerOverlay != null) {
+            this.binding.layoutExpenseDrawerOverlay.setOnClickListener(v -> closeExpenseDrawer());
+        }
+
+        // Type selection [ দোকান ] [ বাড়ি ]
+        if (this.binding.btnDrawerTypeShop != null && this.binding.btnDrawerTypeHome != null) {
+            this.binding.btnDrawerTypeShop.setOnClickListener(v -> {
+                selectedExpenseType = ExpenseModel.TYPE_SHOP;
+                binding.btnDrawerTypeShop.setBackgroundResource(R.drawable.bg_pill_type_active);
+                binding.btnDrawerTypeShop.setTextColor(Color.WHITE);
+                binding.btnDrawerTypeHome.setBackgroundResource(R.drawable.bg_pill_type_inactive);
+                binding.btnDrawerTypeHome.setTextColor(Color.parseColor("#64748B"));
+            });
+
+            this.binding.btnDrawerTypeHome.setOnClickListener(v -> {
+                selectedExpenseType = ExpenseModel.TYPE_HOME;
+                binding.btnDrawerTypeHome.setBackgroundResource(R.drawable.bg_pill_type_active);
+                binding.btnDrawerTypeHome.setTextColor(Color.WHITE);
+                binding.btnDrawerTypeShop.setBackgroundResource(R.drawable.bg_pill_type_inactive);
+                binding.btnDrawerTypeShop.setTextColor(Color.parseColor("#64748B"));
+            });
+        }
+
+        // Date Picker
+        if (this.binding.layoutDrawerDatePicker != null) {
+            this.binding.layoutDrawerDatePicker.setOnClickListener(v -> showDatePickerDialog());
+        }
+
+        // Save Button
+        if (this.binding.btnDrawerSave != null) {
+            this.binding.btnDrawerSave.setOnClickListener(v -> saveExpenseFromDrawer());
+        }
+
+        // Keyboard actions
+        if (this.binding.etDrawerExpenseAmount != null) {
+            this.binding.etDrawerExpenseAmount.setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_NEXT || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                    binding.etExpenseAmount.requestFocus();
+                    if (binding.etDrawerExpenseName != null) {
+                        binding.etDrawerExpenseName.requestFocus();
+                    }
                     return true;
                 }
                 return false;
-            }
-        });
-        this.binding.etExpenseAmount.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+            });
+        }
+
+        if (this.binding.etDrawerExpenseName != null) {
+            this.binding.etDrawerExpenseName.setOnItemClickListener((parent, view, position, id) -> {
+                Object item = parent.getItemAtPosition(position);
+                if (item != null) {
+                    binding.etDrawerExpenseName.setText(item.toString());
+                    binding.etDrawerExpenseName.setSelection(item.toString().length());
+                }
+            });
+
+            this.binding.etDrawerExpenseName.setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                    binding.btnAddExpense.performClick();
+                    saveExpenseFromDrawer();
                     return true;
                 }
                 return false;
-            }
-        });
+            });
+        }
+    }
+
+    private void setupListeners() {
+        // Setup Expense Drawer
+        setupExpenseDrawer();
+
+        // Quick action: খরচ button triggers Drawer
+        if (this.binding.btnQuickExpenseShortcut != null) {
+            this.binding.btnQuickExpenseShortcut.setOnClickListener(v -> openExpenseDrawer());
+        }
+
+        // Card button: + খরচ যোগ triggers Drawer
+        if (this.binding.btnOpenExpenseDrawerFromCard != null) {
+            this.binding.btnOpenExpenseDrawerFromCard.setOnClickListener(v -> openExpenseDrawer());
+        }
+
         View.OnClickListener sabekSuggestClick = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -848,6 +996,7 @@ public class MainActivity extends AppCompatActivity {
         };
         this.binding.btnSuggestSabekCash.setOnClickListener(sabekSuggestClick);
         this.binding.btnApplySabekSuggestion.setOnClickListener(sabekSuggestClick);
+
         if (this.binding.btnHeaderCloudSync != null) {
             this.binding.btnHeaderCloudSync.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -856,6 +1005,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+
         this.binding.btnMenu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -866,83 +1016,85 @@ public class MainActivity extends AppCompatActivity {
                 popup.getMenu().add(0, 4, 3, "🗑️ হিসাব রিসেট করুন");
                 popup.setOnMenuItemClickListener(new androidx.appcompat.widget.PopupMenu.OnMenuItemClickListener() {
                     @Override
-                    public boolean onMenuItemClick(android.view.MenuItem item) {
-                        switch (item.getItemId()) {
-                            case 1:
-                                shareDailyReport();
-                                return true;
-                            case 2:
-                                triggerPdfExport(true);
-                                return true;
-                            case 3:
+                    public boolean onMenuItemClick(MenuItem item) {
+                        int id = item.getItemId();
+                        if (id == 1) {
+                            shareDailyReport();
+                            return true;
+                        } else if (id == 2) {
+                            triggerPdfExport(true);
+                            return true;
+                        } else if (id == 3) {
+                            if (viewModel != null) {
                                 viewModel.loadSavedData();
-                                updateSabekSuggestionUI();
                                 updateDashboardUI();
-                                Toast.makeText(MainActivity.this, "হিসাব হালনাগাদ করা হয়েছে", Toast.LENGTH_SHORT).show();
-                                return true;
-                            case 4:
-                                showClearAllConfirmationDialog();
-                                return true;
-                            default:
-                                return false;
+                                Toast.makeText(MainActivity.this, "হিসাব হালনাগাদ (রিলোড) হয়েছে", Toast.LENGTH_SHORT).show();
+                            }
+                            return true;
+                        } else if (id == 4) {
+                            showClearAllConfirmationDialog();
+                            return true;
                         }
+                        return false;
                     }
                 });
                 popup.show();
             }
         });
-        this.binding.btnToggleExpensesCollapse.setOnClickListener(new View.OnClickListener() {
+
+        if (this.binding.btnToggleExpensesCollapse != null) {
+            this.binding.btnToggleExpensesCollapse.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    isExpensesExpanded = !isExpensesExpanded;
+                    filterExpenses();
+                }
+            });
+        }
+
+        this.binding.etSearchExpenses.addTextChangedListener(new TextWatcher() {
             @Override
-            public void onClick(View v) {
-                isExpensesExpanded = !isExpensesExpanded;
-                filterExpenses();
-            }
-        });
-        this.binding.etSearchExpenses.addTextChangedListener(new TextWatcher() { // from class: com.example.MainActivity.2
-            @Override // android.text.TextWatcher
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
 
-            @Override // android.text.TextWatcher
+            @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 MainActivity.this.searchFilterText = s != null ? s.toString() : "";
                 MainActivity.this.filterExpenses();
             }
 
-            @Override // android.text.TextWatcher
+            @Override
             public void afterTextChanged(Editable s) {
             }
         });
-        this.binding.btnPrevDay.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda30
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
+
+        this.binding.btnPrevDay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 MainActivity.this.m7021lambda$setupListeners$18$comexampleMainActivity(view);
             }
         });
-        this.binding.btnNextDay.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda31
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
+
+        this.binding.btnNextDay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 MainActivity.this.m7022lambda$setupListeners$19$comexampleMainActivity(view);
             }
         });
-        this.binding.layoutDatePicker.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda16
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
+
+        this.binding.layoutDatePicker.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 MainActivity.this.m7023lambda$setupListeners$20$comexampleMainActivity(view);
             }
         });
-        this.binding.btnAddExpense.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda17
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
-                MainActivity.this.m7024lambda$setupListeners$21$comexampleMainActivity(view);
-            }
-        });
-        this.binding.etSabekCash.addTextChangedListener(new TextWatcher() { // from class: com.example.MainActivity.3
-            @Override // android.text.TextWatcher
+
+        this.binding.etSabekCash.addTextChangedListener(new TextWatcher() {
+            @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
 
-            @Override // android.text.TextWatcher
+            @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (MainActivity.this.isUpdatingInputs) {
                     return;
@@ -959,16 +1111,17 @@ public class MainActivity extends AppCompatActivity {
                 MainActivity.this.planAutoCloudBackup();
             }
 
-            @Override // android.text.TextWatcher
+            @Override
             public void afterTextChanged(Editable s) {
             }
         });
-        this.binding.etAvailableCash.addTextChangedListener(new TextWatcher() { // from class: com.example.MainActivity.4
-            @Override // android.text.TextWatcher
+
+        this.binding.etAvailableCash.addTextChangedListener(new TextWatcher() {
+            @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
 
-            @Override // android.text.TextWatcher
+            @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (MainActivity.this.isUpdatingInputs) {
                     return;
@@ -985,91 +1138,19 @@ public class MainActivity extends AppCompatActivity {
                 MainActivity.this.planAutoCloudBackup();
             }
 
-            @Override // android.text.TextWatcher
+            @Override
             public void afterTextChanged(Editable s) {
             }
         });
-        this.binding.swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda18
-            @Override // androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
-            public final void onRefresh() {
-                MainActivity.this.m7026lambda$setupListeners$23$comexampleMainActivity();
-            }
-        });
-        this.binding.btnExportPdf.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda19
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
-                MainActivity.this.m7027lambda$setupListeners$24$comexampleMainActivity(view);
-            }
-        });
-        this.binding.btnShareReport.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda20
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
-                MainActivity.this.m7028lambda$setupListeners$25$comexampleMainActivity(view);
-            }
-        });
-        this.binding.btnRefreshExpenses.setOnClickListener(new View.OnClickListener() { // from class: com.example.MainActivity$$ExternalSyntheticLambda21
-            @Override // android.view.View.OnClickListener
-            public final void onClick(View view) {
-                MainActivity.this.m7030lambda$setupListeners$27$comexampleMainActivity(view);
-            }
-        });
-    }
 
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$setupListeners$18$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m7021lambda$setupListeners$18$comexampleMainActivity(View v) {
-        this.viewModel.moveToPreviousDay();
-        updateSabekSuggestionUI();
-    }
-
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$setupListeners$19$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m7022lambda$setupListeners$19$comexampleMainActivity(View v) {
-        this.viewModel.moveToNextDay();
-        updateSabekSuggestionUI();
-    }
-
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$setupListeners$20$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m7023lambda$setupListeners$20$comexampleMainActivity(View v) {
-        showDatePickerDialog();
-    }
-
-    /* JADX INFO: Access modifiers changed from: package-private */
-    /* renamed from: lambda$setupListeners$21$com-example-MainActivity, reason: not valid java name */
-    public /* synthetic */ void m7024lambda$setupListeners$21$comexampleMainActivity(View v) {
-        String name = this.binding.etExpenseName.getText().toString().trim();
-        String amountStr = this.binding.etExpenseAmount.getText().toString().trim();
-        if (name.isEmpty()) {
-            this.binding.etExpenseName.setError("খরচের নাম খালি রাখা যাবে না!");
-            Toast.makeText(this, "অনুগ্রহ করে খরচের বিবরণ বা নাম লিখুন", 0).show();
-            return;
+        if (this.binding.swipeRefreshLayout != null) {
+            this.binding.swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                @Override
+                public void onRefresh() {
+                    MainActivity.this.m7026lambda$setupListeners$23$comexampleMainActivity();
+                }
+            });
         }
-        if (amountStr.isEmpty()) {
-            this.binding.etExpenseAmount.setError("টাকার পরিমাণ লিখুন!");
-            Toast.makeText(this, "অনুগ্রহ করে টাকার সঠিক পরিমাণ দিন", 0).show();
-            return;
-        }
-        try {
-            double amount = Double.parseDouble(amountStr);
-            if (amount <= 0.0d) {
-                this.binding.etExpenseAmount.setError("টাকার পরিমাণ শূন্য বা ঋণাত্মক হতে পারবে না!");
-                Toast.makeText(this, "টাকার পরিমাণ অবশ্যই শূন্যের চেয়ে বড় হতে হবে", 0).show();
-                return;
-            }
-            boolean success = this.viewModel.addExpense(name, amount);
-            if (success) {
-                this.binding.etExpenseName.setText("");
-                this.binding.etExpenseAmount.setText("");
-                this.binding.etExpenseName.clearFocus();
-                this.binding.etExpenseAmount.clearFocus();
-                Toast.makeText(this, "নতুন খরচ খತಿয়ানে যোগ করা হয়েছে", 0).show();
-                planAutoCloudBackup();
-            }
-        } catch (NumberFormatException e) {
-            this.binding.etExpenseAmount.setError("সঠিক সংখ্যা দিন!");
-        }
-    }
 
     /* JADX INFO: Access modifiers changed from: package-private */
     /* renamed from: lambda$setupListeners$23$com-example-MainActivity, reason: not valid java name */
@@ -2991,7 +3072,9 @@ public class MainActivity extends AppCompatActivity {
                 };
             }
         };
-        this.binding.etExpenseName.setAdapter(adapter);
+        if (this.binding.etDrawerExpenseName != null) {
+            this.binding.etDrawerExpenseName.setAdapter(adapter);
+        }
     }
 
     /* JADX INFO: Access modifiers changed from: private */
@@ -4263,15 +4346,23 @@ public class MainActivity extends AppCompatActivity {
     private void refreshFordiGrandTotals(FordiModel activeFordi) {
         if (activeFordi == null || this.binding == null) return;
         double plannedSum = activeFordi.getPlannedTotal();
+        double checkedSum = activeFordi.getCheckedTotal();
+        int totalCount = activeFordi.getItems().size();
+        int checkedCount = activeFordi.getCheckedItemCount();
         double profitSum = activeFordi.getPotentialProfit();
-        this.binding.tvFordiItemSummaryCount.setText(toBengaliDigits(String.valueOf(activeFordi.getItems().size())) + "টি পণ্য");
+
+        this.binding.tvFordiItemSummaryCount.setText("📋 সব পণ্য (" + toBengaliDigits(String.valueOf(totalCount)) + "টি)");
+        this.binding.tvFordiTableGrandTotal.setText("৳ " + PdfExporter.formatBengaliNumber(plannedSum));
+
+        this.binding.tvFordiCheckedCount.setText("✓ কেনা বাজার (" + toBengaliDigits(String.valueOf(checkedCount)) + "টি)");
+        this.binding.tvFordiCheckedGrandTotal.setText("৳ " + PdfExporter.formatBengaliNumber(checkedSum));
+
         if (profitSum > 0) {
             this.binding.tvFordiTableProfitPreview.setVisibility(View.VISIBLE);
-            this.binding.tvFordiTableProfitPreview.setText("সম্ভাব্য লাভ: ৳ " + PdfExporter.formatBengaliNumber(profitSum));
+            this.binding.tvFordiTableProfitPreview.setText("সম্ভাব্য মোট লাভ: ৳ " + PdfExporter.formatBengaliNumber(profitSum));
         } else {
             this.binding.tvFordiTableProfitPreview.setVisibility(View.GONE);
         }
-        this.binding.tvFordiTableGrandTotal.setText("মোট ৳ " + PdfExporter.formatBengaliNumber(plannedSum));
 
         if (activeFordi.isPostedToAccounting()) {
             this.binding.btnFordiPostToAccounting.setText("✓ আজকের হিসাবে যোগ হয়েছে");
@@ -4279,8 +4370,7 @@ public class MainActivity extends AppCompatActivity {
             this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#D1FAE5")));
             this.binding.btnFordiPostToAccounting.setTextColor(Color.parseColor("#065F46"));
         } else {
-            double actualCost = activeFordi.getActualTotal();
-            double costToShow = actualCost > 0 ? actualCost : plannedSum;
+            double costToShow = checkedSum > 0 ? checkedSum : plannedSum;
             this.binding.btnFordiPostToAccounting.setText("🛒 হিসাবে যোগ করুন (৳ " + PdfExporter.formatBengaliNumber(costToShow) + ")");
             this.binding.btnFordiPostToAccounting.setEnabled(true);
             this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCFBF1")));
@@ -4580,15 +4670,23 @@ public class MainActivity extends AppCompatActivity {
 
         // Summary Row Updates
         double plannedSum = activeFordi.getPlannedTotal();
+        double checkedSum = activeFordi.getCheckedTotal();
+        int totalCount = activeFordi.getItems().size();
+        int checkedCount = activeFordi.getCheckedItemCount();
         double profitSum = activeFordi.getPotentialProfit();
-        this.binding.tvFordiItemSummaryCount.setText(toBengaliDigits(String.valueOf(activeFordi.getItems().size())) + "টি পণ্য");
+
+        this.binding.tvFordiItemSummaryCount.setText("📋 সব পণ্য (" + toBengaliDigits(String.valueOf(totalCount)) + "টি)");
+        this.binding.tvFordiTableGrandTotal.setText("৳ " + PdfExporter.formatBengaliNumber(plannedSum));
+
+        this.binding.tvFordiCheckedCount.setText("✓ কেনা বাজার (" + toBengaliDigits(String.valueOf(checkedCount)) + "টি)");
+        this.binding.tvFordiCheckedGrandTotal.setText("৳ " + PdfExporter.formatBengaliNumber(checkedSum));
+
         if (profitSum > 0) {
             this.binding.tvFordiTableProfitPreview.setVisibility(View.VISIBLE);
-            this.binding.tvFordiTableProfitPreview.setText("সম্ভাব্য লাভ: ৳ " + PdfExporter.formatBengaliNumber(profitSum));
+            this.binding.tvFordiTableProfitPreview.setText("সম্ভাব্য মোট লাভ: ৳ " + PdfExporter.formatBengaliNumber(profitSum));
         } else {
             this.binding.tvFordiTableProfitPreview.setVisibility(View.GONE);
         }
-        this.binding.tvFordiTableGrandTotal.setText("মোট ৳ " + PdfExporter.formatBengaliNumber(plannedSum));
 
         // Action Button state
         if (activeFordi.isPostedToAccounting()) {
@@ -4597,8 +4695,7 @@ public class MainActivity extends AppCompatActivity {
             this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#D1FAE5")));
             this.binding.btnFordiPostToAccounting.setTextColor(Color.parseColor("#065F46"));
         } else {
-            double actualCost = activeFordi.getActualTotal();
-            double costToShow = actualCost > 0 ? actualCost : plannedSum;
+            double costToShow = checkedSum > 0 ? checkedSum : plannedSum;
             this.binding.btnFordiPostToAccounting.setText("🛒 হিসাবে যোগ করুন (৳ " + PdfExporter.formatBengaliNumber(costToShow) + ")");
             this.binding.btnFordiPostToAccounting.setEnabled(true);
             this.binding.btnFordiPostToAccounting.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCFBF1")));

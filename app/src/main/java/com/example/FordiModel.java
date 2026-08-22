@@ -67,6 +67,30 @@ public class FordiModel implements Serializable {
         return total;
     }
 
+    public double getCheckedTotal() {
+        double total = 0.0;
+        if (items != null) {
+            for (FordiItemModel item : items) {
+                if (item.isChecked()) {
+                    total += item.getPlannedTotal();
+                }
+            }
+        }
+        return total;
+    }
+
+    public int getCheckedItemCount() {
+        int count = 0;
+        if (items != null) {
+            for (FordiItemModel item : items) {
+                if (item.isChecked()) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     public double getPotentialProfit() {
         double total = 0.0;
         if (items != null) {

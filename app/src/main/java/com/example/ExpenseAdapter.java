@@ -51,12 +51,14 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
         private final TextView tvItemDate;
         private final TextView tvItemName;
         private final TextView tvItemTime;
+        private final TextView tvItemType;
 
         public ExpenseViewHolder(View itemView) {
             super(itemView);
             this.tvItemName = (TextView) itemView.findViewById(R.id.tvItemName);
             this.tvItemDate = (TextView) itemView.findViewById(R.id.tvItemDate);
             this.tvItemTime = (TextView) itemView.findViewById(R.id.tvItemTime);
+            this.tvItemType = (TextView) itemView.findViewById(R.id.tvItemType);
             this.tvItemAmount = (TextView) itemView.findViewById(R.id.tvItemAmount);
             this.btnEditItem = (ImageButton) itemView.findViewById(R.id.btnEditItem);
             this.btnDeleteItem = (ImageButton) itemView.findViewById(R.id.btnDeleteItem);
@@ -65,23 +67,48 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
         }
 
         public void bind(final ExpenseModel expense, final int position, final OnExpenseActionListener listener) {
-            int serialNo = position + 1;
-            String banglaSerial = PdfExporter.toBengaliDigits(String.valueOf(serialNo));
-            this.tvCategoryLetter.setText(banglaSerial);
-            this.tvItemName.setText(expense.getName());
-            this.tvItemDate.setText(expense.getDate());
-            this.tvItemTime.setText(expense.getTime());
-            String banglaPriceStr = "৳ " + PdfExporter.formatBengaliNumber(expense.getAmount());
-            this.tvItemAmount.setText(banglaPriceStr);
+            if (this.tvCategoryLetter != null) {
+                int serialNo = position + 1;
+                String banglaSerial = PdfExporter.toBengaliDigits(String.valueOf(serialNo));
+                this.tvCategoryLetter.setText(banglaSerial);
+            }
+            if (this.tvItemName != null) {
+                this.tvItemName.setText(expense.getName());
+            }
+            if (this.tvItemDate != null) {
+                this.tvItemDate.setText(expense.getDate());
+            }
+            if (this.tvItemTime != null) {
+                String t = expense.getTime();
+                if (t == null || t.trim().isEmpty()) {
+                    t = "00:00";
+                }
+                this.tvItemTime.setText(t);
+            }
+            if (this.tvItemType != null) {
+                if (expense.isHomeExpense()) {
+                    this.tvItemType.setText("বাড়ি");
+                    this.tvItemType.setTextColor(Color.parseColor("#D97706"));
+                } else {
+                    this.tvItemType.setText("দোকান");
+                    this.tvItemType.setTextColor(Color.parseColor("#2563EB"));
+                }
+            }
+            if (this.tvItemAmount != null) {
+                String banglaPriceStr = "৳ " + PdfExporter.formatBengaliNumber(expense.getAmount());
+                this.tvItemAmount.setText(banglaPriceStr);
+            }
             
-            String[] badgeColors = {
-                "#2563EB", "#059669", "#7C3AED", "#D97706", "#DC2626", 
-                "#0891B2", "#4F46E5", "#0D9488", "#EA580C", "#9333EA"
-            };
-            String colorHex = badgeColors[position % badgeColors.length];
-            try {
-                this.layoutCategoryAvatar.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(colorHex)));
-            } catch (Exception ignored) {
+            if (this.layoutCategoryAvatar != null) {
+                String[] badgeColors = {
+                    "#2563EB", "#059669", "#7C3AED", "#D97706", "#DC2626", 
+                    "#0891B2", "#4F46E5", "#0D9488", "#EA580C", "#9333EA"
+                };
+                String colorHex = badgeColors[position % badgeColors.length];
+                try {
+                    this.layoutCategoryAvatar.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(colorHex)));
+                } catch (Exception ignored) {
+                }
             }
 
             this.itemView.setOnClickListener(new View.OnClickListener() {

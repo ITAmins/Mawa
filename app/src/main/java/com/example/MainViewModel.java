@@ -248,13 +248,19 @@ public class MainViewModel extends AndroidViewModel {
     }
 
     public boolean addExpense(String name, double amount) {
+        return addExpense(name, amount, ExpenseModel.TYPE_SHOP);
+    }
+
+    public boolean addExpense(String name, double amount, String expenseType) {
         if (name != null && !name.trim().isEmpty()) {
             if (amount > 0.0d) {
                 new SimpleDateFormat("dd-MM-yyyy", Locale.US);
                 SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.US);
                 String dateStr = getActiveDateKey();
                 String timeStr = timeFormat.format(Calendar.getInstance().getTime());
-                ExpenseModel newExpense = new ExpenseModel(UUID.randomUUID().toString(), name.trim(), amount, dateStr, timeStr);
+                String expType = (expenseType != null && !expenseType.trim().isEmpty()) ? expenseType : ExpenseModel.TYPE_SHOP;
+                String legacyType = ExpenseModel.TYPE_HOME.equalsIgnoreCase(expType) ? ExpenseModel.TYPE_HOME : ExpenseModel.autoClassifyType(name);
+                ExpenseModel newExpense = new ExpenseModel(UUID.randomUUID().toString(), name.trim(), amount, dateStr, timeStr, legacyType, expType);
                 List<ExpenseModel> currentExpenses = this.expenses.getValue();
                 if (currentExpenses == null) {
                     currentExpenses = new ArrayList();

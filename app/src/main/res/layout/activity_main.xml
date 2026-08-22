@@ -1024,111 +1024,13 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- ADD EXPENSE FORM (সহজ খরচ এন্ট্রি - বিবরণ, টাকা, দোকান/বাড়ি নির্বাচন) -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:cardBackgroundColor="#FFFFFF"
-                        app:cardCornerRadius="18dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="#E2E8F0"
-                        app:strokeWidth="1dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="নতুন খরচ যোগ করুন"
-                                android:textColor="#0F172A"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="10dp" />
-
-                            <!-- Product Name Autocomplete -->
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginBottom="8dp"
-                                android:hint="খরচের বিবরণ বা পণ্যের নাম"
-                                app:boxCornerRadiusBottomEnd="12dp"
-                                app:boxCornerRadiusBottomStart="12dp"
-                                app:boxCornerRadiusTopEnd="12dp"
-                                app:boxCornerRadiusTopStart="12dp"
-                                app:boxStrokeColor="#2563EB"
-                                app:startIconDrawable="@drawable/ic_notebook"
-                                app:startIconTint="#64748B">
-
-                                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                                    android:id="@+id/etExpenseName"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:completionThreshold="1"
-                                    android:hint="যেমন: চাল, ডাল, তেল, বিদ্যুৎ বিল"
-                                    android:imeOptions="actionNext"
-                                    android:inputType="textCapWords|textNoSuggestions"
-                                    android:textColor="#0F172A"
-                                    android:textColorHint="#94A3B8"
-                                    app:simpleItemLayout="@android:layout/simple_dropdown_item_1line" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <!-- Expense Amount -->
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginBottom="12dp"
-                                android:hint="টাকার পরিমাণ"
-                                app:boxCornerRadiusBottomEnd="12dp"
-                                app:boxCornerRadiusBottomStart="12dp"
-                                app:boxCornerRadiusTopEnd="12dp"
-                                app:boxCornerRadiusTopStart="12dp"
-                                app:boxStrokeColor="#2563EB"
-                                app:prefixText="৳ "
-                                app:prefixTextColor="#0F172A">
-
-                                <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etExpenseAmount"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:hint="০"
-                                    android:imeOptions="actionDone"
-                                    android:inputType="numberDecimal"
-                                    android:textColor="#0F172A"
-                                    android:textColorHint="#94A3B8" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <!-- Add Button -->
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnAddExpense"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:text="খরচ যোগ করুন"
-                                android:textColor="#FFFFFF"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
-                                app:backgroundTint="#2563EB"
-                                app:cornerRadius="14dp"
-                                app:icon="@drawable/ic_plus"
-                                app:iconGravity="textStart"
-                                app:iconSize="18dp"
-                                app:iconTint="#FFFFFF" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- EXPENSES LIST SECTION (আজকের খরচ তালিকা) -->
+                    <!-- MINIMAL INLINE LEDGER EXPENSE SECTION -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
                         app:cardBackgroundColor="#FFFFFF"
-                        app:cardCornerRadius="18dp"
+                        app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
                         app:strokeColor="#E2E8F0"
                         app:strokeWidth="1dp">
@@ -1137,112 +1039,151 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="16dp">
+                            android:padding="14dp">
 
-                            <RelativeLayout
+                            <!-- 1. EXPENSE SUMMARY & QUICK ADD HEADER -->
+                            <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginBottom="10dp">
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
                                 <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="আজকের খরচ"
+                                        android:textColor="#0F172A"
+                                        android:textSize="16sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvExpenseBreakdownShopHome"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="দোকান ৳০ • বাড়ি ৳০"
+                                        android:textColor="#64748B"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvTotalExpenses"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:gravity="center_vertical"
-                                    android:orientation="horizontal"
-                                    android:layout_alignParentStart="true"
-                                    android:layout_centerVertical="true">
+                                    android:layout_marginEnd="10dp"
+                                    android:text="৳ ০"
+                                    android:textColor="#0F172A"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
 
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="খরচের তালিকা"
-                                        android:textColor="#0F172A"
-                                        android:textSize="14sp"
-                                        android:textStyle="bold" />
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnOpenExpenseDrawerFromCard"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="38dp"
+                                    android:text="＋ খরচ যোগ"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:paddingHorizontal="12dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    app:backgroundTint="#2563EB"
+                                    app:cornerRadius="10dp" />
+                            </LinearLayout>
 
-                                    <TextView
-                                        android:id="@+id/tvExpensesCountBadge"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginStart="8dp"
-                                        android:background="@drawable/shape_circle"
-                                        android:backgroundTint="#EFF6FF"
-                                        android:paddingHorizontal="8dp"
-                                        android:paddingVertical="2dp"
-                                        android:text="০টি"
-                                        android:textColor="#2563EB"
-                                        android:textSize="11sp"
-                                        android:textStyle="bold" />
-                                </LinearLayout>
+                            <!-- 3. SUBTLE DIVIDER LINE (──────────) -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="12dp"
+                                android:background="#E2E8F0" />
+
+                            <!-- 4. SECTION HEADER & SEARCH / FILTER / LIST -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="আজকের হিসাব"
+                                    android:textColor="#334155"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvExpensesCountBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:background="@drawable/shape_circle"
+                                    android:backgroundTint="#EFF6FF"
+                                    android:paddingHorizontal="6dp"
+                                    android:paddingVertical="1dp"
+                                    android:text="০টি"
+                                    android:textColor="#2563EB"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold" />
 
                                 <ImageView
                                     android:id="@+id/btnRefreshExpenses"
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:layout_alignParentEnd="true"
-                                    android:layout_centerVertical="true"
+                                    android:layout_width="28dp"
+                                    android:layout_height="28dp"
                                     android:background="?selectableItemBackgroundBorderless"
                                     android:clickable="true"
-                                    android:focusable="true"
-                                    android:padding="6dp"
-                                    android:src="@drawable/ic_refresh"
                                     android:contentDescription="রিফ্রেশ"
-                                    app:tint="#64748B" />
-                            </RelativeLayout>
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_refresh"
+                                    app:tint="#94A3B8" />
+                            </LinearLayout>
 
-                            <!-- Search Box -->
-                            <com.google.android.material.textfield.TextInputLayout
-                                android:id="@+id/layoutSearchExpenses"
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            <!-- Optional compact search bar -->
+                            <EditText
+                                android:id="@+id/etSearchExpenses"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginBottom="10dp"
-                                app:boxCornerRadiusBottomEnd="12dp"
-                                app:boxCornerRadiusBottomStart="12dp"
-                                app:boxCornerRadiusTopEnd="12dp"
-                                app:boxCornerRadiusTopStart="12dp"
-                                app:boxStrokeColor="#2563EB"
-                                app:endIconMode="clear_text"
-                                app:endIconTint="#64748B"
-                                app:startIconDrawable="@drawable/ic_search"
-                                app:startIconTint="#64748B">
+                                android:layout_height="36dp"
+                                android:layout_marginBottom="8dp"
+                                android:background="@drawable/bg_pill_input"
+                                android:drawableStart="@drawable/ic_search"
+                                android:drawablePadding="6dp"
+                                android:drawableTint="#94A3B8"
+                                android:hint="খুঁজুন..."
+                                android:inputType="text"
+                                android:paddingHorizontal="10dp"
+                                android:textColor="#0F172A"
+                                android:textColorHint="#94A3B8"
+                                android:textSize="12sp"
+                                android:visibility="gone" />
 
-                                <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etSearchExpenses"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:hint="🔍 খরচ খুঁজুন বা ফিল্টার করুন..."
-                                    android:inputType="text"
-                                    android:textColor="#0F172A"
-                                    android:textSize="13sp" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <!-- Empty State -->
+                            <!-- Empty state -->
                             <LinearLayout
                                 android:id="@+id/layoutEmptyState"
                                 android:layout_width="match_parent"
-                                android:layout_height="120dp"
+                                android:layout_height="80dp"
                                 android:gravity="center"
                                 android:orientation="vertical"
                                 android:visibility="visible">
 
-                                <ImageView
-                                    android:layout_width="48dp"
-                                    android:layout_height="48dp"
-                                    android:layout_marginBottom="6dp"
-                                    android:src="@drawable/ic_empty_state"
-                                    android:contentDescription="কোনো খরচ নেই" />
-
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:gravity="center"
                                     android:text="আজকে এখনো কোনো খরচ যোগ করা হয়নি"
-                                    android:textColor="#64748B"
-                                    android:textSize="13sp" />
+                                    android:textColor="#94A3B8"
+                                    android:textSize="12sp" />
                             </LinearLayout>
 
-                            <!-- Expenses RecyclerView -->
+                            <!-- Clean Ledger Rows RecyclerView -->
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/rvExpenses"
                                 android:layout_width="match_parent"
@@ -1250,20 +1191,20 @@
                                 android:nestedScrollingEnabled="false"
                                 android:visibility="gone" />
 
-                            <!-- See More / Collapse Button -->
+                            <!-- See more / collapse button -->
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnToggleExpensesCollapse"
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="match_parent"
-                                android:layout_height="42dp"
-                                android:layout_marginTop="8dp"
-                                android:text="আরও দেখুন (সি মোর) ▾"
+                                android:layout_height="38dp"
+                                android:layout_marginTop="6dp"
+                                android:text="আরও দেখুন ▾"
                                 android:textColor="#2563EB"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
                                 android:visibility="gone"
-                                app:backgroundTint="#F1F5F9"
-                                app:cornerRadius="12dp" />
+                                app:backgroundTint="#F8FAFC"
+                                app:cornerRadius="10dp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -1273,7 +1214,6 @@
                         android:layout_height="0dp"
                         android:visibility="gone">
                         <TextView android:id="@+id/tvTotalSale" android:layout_width="0dp" android:layout_height="0dp" />
-                        <TextView android:id="@+id/tvTotalExpenses" android:layout_width="0dp" android:layout_height="0dp" />
                         <TextView android:id="@+id/tvMiniDailySale" android:layout_width="0dp" android:layout_height="0dp" />
                         <LinearLayout android:id="@+id/layoutNotebookExpensesList" android:layout_width="0dp" android:layout_height="0dp" />
                         <TextView android:id="@+id/tvNotebookTotalExpenses" android:layout_width="0dp" android:layout_height="0dp" />
@@ -1629,49 +1569,91 @@
                                 android:layout_marginTop="4dp"
                                 android:layout_marginBottom="4dp" />
 
-                            <!-- Summary Row: "মোট 1,510" -->
-                            <RelativeLayout
+                            <!-- Summary Container: সব পণ্যের মোট এবং টিক দেওয়া বাজারের মোট -->
+                            <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:paddingVertical="8dp"
-                                android:paddingHorizontal="4dp">
+                                android:orientation="vertical"
+                                android:paddingVertical="6dp"
+                                android:paddingHorizontal="2dp">
 
                                 <LinearLayout
-                                    android:layout_width="wrap_content"
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_alignParentStart="true"
-                                    android:layout_centerVertical="true"
-                                    android:orientation="vertical">
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
 
-                                    <TextView
-                                        android:id="@+id/tvFordiItemSummaryCount"
-                                        android:layout_width="wrap_content"
+                                    <!-- Card 1: সব পণ্যের মোট -->
+                                    <LinearLayout
+                                        android:layout_width="0dp"
                                         android:layout_height="wrap_content"
-                                        android:text="০টি পণ্য"
-                                        android:textColor="#64748B"
-                                        android:textSize="11sp" />
+                                        android:layout_weight="1"
+                                        android:layout_marginEnd="4dp"
+                                        android:background="@drawable/bg_fordi_planned_box"
+                                        android:orientation="vertical"
+                                        android:padding="8dp">
 
-                                    <TextView
-                                        android:id="@+id/tvFordiTableProfitPreview"
-                                        android:layout_width="wrap_content"
+                                        <TextView
+                                            android:id="@+id/tvFordiItemSummaryCount"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="📋 সব পণ্য (০টি)"
+                                            android:textColor="#64748B"
+                                            android:textSize="11sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/tvFordiTableGrandTotal"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="৳ ০"
+                                            android:textColor="#0F172A"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <!-- Card 2: টিক দেওয়া কেনা বাজারের মোট -->
+                                    <LinearLayout
+                                        android:layout_width="0dp"
                                         android:layout_height="wrap_content"
-                                        android:text="সম্ভাব্য লাভ: ৳ ০"
-                                        android:textColor="#2563EB"
-                                        android:textSize="11sp"
-                                        android:textStyle="bold" />
+                                        android:layout_weight="1"
+                                        android:layout_marginStart="4dp"
+                                        android:background="@drawable/bg_fordi_checked_box"
+                                        android:orientation="vertical"
+                                        android:padding="8dp">
+
+                                        <TextView
+                                            android:id="@+id/tvFordiCheckedCount"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="✓ কেনা বাজার (০টি)"
+                                            android:textColor="#059669"
+                                            android:textSize="11sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/tvFordiCheckedGrandTotal"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="৳ ০"
+                                            android:textColor="#047857"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
                                 </LinearLayout>
 
                                 <TextView
-                                    android:id="@+id/tvFordiTableGrandTotal"
+                                    android:id="@+id/tvFordiTableProfitPreview"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_alignParentEnd="true"
-                                    android:layout_centerVertical="true"
-                                    android:text="মোট ০"
-                                    android:textColor="#0F172A"
-                                    android:textSize="18sp"
+                                    android:layout_marginTop="6dp"
+                                    android:text="সম্ভাব্য লাভ: ৳ ০"
+                                    android:textColor="#2563EB"
+                                    android:textSize="11.5sp"
                                     android:textStyle="bold" />
-                            </RelativeLayout>
+                            </LinearLayout>
 
                             <!-- Action Buttons inside table card -->
                             <LinearLayout
@@ -3188,6 +3170,268 @@
                 android:icon="@drawable/ic_nav_more"
                 android:text="আরও" />
         </com.google.android.material.tabs.TabLayout>
+    </LinearLayout>
+
+    <!-- EXPENSE DRAWER OVERLAY -->
+    <View
+        android:id="@+id/layoutExpenseDrawerOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <!-- COMPACT SLIDE-OUT EXPENSE DRAWER -->
+    <LinearLayout
+        android:id="@+id/layoutExpenseDrawer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:layout_marginStart="44dp"
+        android:background="#FFFFFF"
+        android:clickable="true"
+        android:elevation="24dp"
+        android:focusable="true"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="20dp"
+        android:visibility="gone">
+
+        <!-- Header: খরচ যোগ করুন                         × -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="14dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="খরচ যোগ করুন"
+                android:textColor="#0F172A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <!-- Inline Success Confirmation Badge (✓ সংরক্ষিত) -->
+            <TextView
+                android:id="@+id/tvDrawerSuccessBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/shape_capsule_white"
+                android:backgroundTint="#DCFCE7"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:text="✓ সংরক্ষিত"
+                android:textColor="#16A34A"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/btnDrawerClose"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="বন্ধ করুন"
+                android:focusable="true"
+                android:padding="6dp"
+                android:src="@drawable/ic_close"
+                app:tint="#64748B" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F1F5F9"
+            android:layout_marginBottom="16dp" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- 1. কত টাকা? -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="কত টাকা?"
+                    android:textColor="#475569"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="৳"
+                        android:textColor="#0F172A"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:layout_marginEnd="8dp" />
+
+                    <EditText
+                        android:id="@+id/etDrawerExpenseAmount"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_flat_underline_input"
+                        android:hint="০.০০"
+                        android:imeOptions="actionNext"
+                        android:inputType="numberDecimal"
+                        android:paddingHorizontal="4dp"
+                        android:textColor="#0F172A"
+                        android:textColorHint="#CBD5E1"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- 2. কী জন্য? -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="কী জন্য?"
+                    android:textColor="#475569"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/etDrawerExpenseName"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_flat_underline_input"
+                    android:completionThreshold="1"
+                    android:hint="খরচের বিবরণ লিখুন..."
+                    android:imeOptions="actionDone"
+                    android:inputType="textCapWords"
+                    android:paddingHorizontal="4dp"
+                    android:textColor="#0F172A"
+                    android:textColorHint="#CBD5E1"
+                    android:textSize="15sp"
+                    app:simpleItemLayout="@android:layout/simple_dropdown_item_1line" />
+
+                <!-- 3. কোথায় খরচ হয়েছে? [ দোকান ] [ বাড়ি ] -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="কোথায় খরচ হয়েছে?"
+                    android:textColor="#475569"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btnDrawerTypeShop"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/bg_pill_type_active"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="দোকান"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnDrawerTypeHome"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_pill_type_inactive"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="বাড়ি"
+                        android:textColor="#64748B"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- 4. তারিখ -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="তারিখ"
+                    android:textColor="#475569"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/layoutDrawerDatePicker"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_flat_underline_input"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginEnd="8dp"
+                        android:src="@drawable/ic_calendar"
+                        app:tint="#64748B" />
+
+                    <TextView
+                        android:id="@+id/tvDrawerDate"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="আজ"
+                        android:textColor="#0F172A"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 5. সংরক্ষণ button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDrawerSave"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="12dp"
+            android:text="সংরক্ষণ"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:backgroundTint="#2563EB"
+            app:cornerRadius="12dp" />
+
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
